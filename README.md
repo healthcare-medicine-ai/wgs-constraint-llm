@@ -1,5 +1,7 @@
 # Unified Genome Constraint, Pathogenicity, and pLoF Model
 
+![Fig 4](/results/Figure 4: observed vs predicted mutations for SCN1A.png)
+
 This repository contains the code and notebooks used for the analysis presented in the paper titled [A Unified Genome Constraint, Pathogenicity, and pLoF Model Identifies New Genes Associated with Epilepsy](https://www.medrxiv.org/content/10.1101/2024.06.27.24309590v2.full-text). The repository is organized into several Jupyter notebooks that correspond to different aspects of the analysis, as well as a results folder containing key outputs.
 
 ## Repository Structure
