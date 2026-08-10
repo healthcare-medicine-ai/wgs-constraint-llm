@@ -1,0 +1,34 @@
+# Paths for the wgs-constraint-llm pipelines.
+#
+# Nothing in src/ or pipelines/ hardcodes a filesystem path; everything resolves
+# through here. Override the location of this file with WGS_CONFIG, or override
+# the two roots directly with WGS_DATA_DIR / WGS_RESULTS_DIR, which is what lets
+# someone outside the lab run this without editing tracked files.
+
+data_dir: /oak/stanford/groups/mrivas/projects/wgs-constraint-llm/data
+results_dir: /oak/stanford/groups/mrivas/projects/wgs-constraint-llm/osthoag/wgs-constraint-llm/results
+
+# Input files, resolved relative to data_dir unless given as absolute paths.
+inputs:
+  gene_annotation: gencode.v44.basic.annotation.gtf.gz
+  epi25_variants: epi25_variant_results.tsv.gz
+  alphamissense: AlphaMissense_hg38.tsv.gz
+  genes4epilepsy: EpilepsyGenes_v2025-09.tsv
+  gerp_bigwig: All_hg38_RS.bw
+
+# Resolved relative to results_dir.
+derived:
+  hmm_predictions: HMM_rgc_0.9_over20_chr2_predictions_rgc_wes.tsv.gz
+
+# Analysis parameters. These are the values behind the submitted results; changing
+# one changes the published numbers, so they live in version control rather than
+# being retyped per notebook cell.
+params:
+  min_variants: 25            # per gene-group inclusion floor
+  exome_wide_threshold: 3.4e-7
+  suggestive_threshold: 1.0e-4
+  max_allele_count: 5         # ac_case + ac_ctrl <= this
+  clip_epsilon: 0.01          # probability clipping bound
+  excluded_chromosomes: [chrX, chrY, chrMT]
+  excluded_consequences: [synonymous, non_coding, "NA"]
+  alphamissense_collapse: max # one row per variant across transcripts

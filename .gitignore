@@ -1,3 +1,46 @@
 *.gz
 all results/
 data/
+
+# ---------------------------------------------------------------------------
+# Added 2026-08-09 with the pipeline overhaul.
+# ---------------------------------------------------------------------------
+
+# Variant-level intermediates. ~180 MB each, above GitHub's 100 MB limit, and
+# derived from controlled-access Epi25 data -- these must not be published.
+results/constraint_gerp_am_epi25_variants*.tsv.gz
+results/constraint_gerp_am_scz_variants*.tsv.gz
+results/constraint_am_epi25_*.tsv.gz
+results/constraint_am_scz_*.tsv.gz
+results/*_SMOKE_*.tsv.gz
+
+# Large derived prediction tables, distributed via figshare instead.
+results/HMM_rgc_*.tsv.gz
+HMM_rgc_*.tsv.gz
+
+# Superseded exploratory runs kept on the cluster, not in version control.
+results/*_REPRO.tsv
+results/*_GERPONLY.tsv
+results/*_AMONLY.tsv
+results/*_SMOKE_*.tsv
+results/epilepsy_unified_model_pvalues_test.tsv
+results/epilepsy_unified_model_pvalues_metafor.tsv
+
+# Working area for the correction; the baseline snapshot is large and lives on
+# the cluster.
+genentech_fix/baseline_R2/
+genentech_fix/logs/
+genentech_fix/.venv*/
+genentech_fix/*.xlsx
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ipynb_checkpoints/
+*.egg-info/
+
+# Editors / OS
+.DS_Store
+.Rhistory
+.RData
