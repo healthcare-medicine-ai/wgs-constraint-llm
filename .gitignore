@@ -44,3 +44,6 @@ __pycache__/
 .DS_Store
 .Rhistory
 .RData
+
+# Slurm job logs.
+logs/
