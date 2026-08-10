@@ -48,8 +48,8 @@ edit to this file.
 | Gene-level p-values | Epilepsy Analysis | `pipelines/01`+`02` | full | **done** — bit-identical, 72,386 models |
 | Table S1 | Epilepsy Analysis | `pipelines/02` | full | **done** — 146/146 rows |
 | Table A1 comparison | Epilepsy Analysis | `pipelines/02` | full | **done** |
-| Tables 1 and 2 | Epilepsy Analysis | `pipelines/06` | full | todo |
-| Figure 5a–d (→ Fig 4) | Epilepsy Analysis | `pipelines/07` | slice | todo |
+| Tables 1 and 2 | Epilepsy Analysis | `pipelines/06` | full | **done** — gate: 28 pairs / 24 genes / STX1B |
+| Figure 5 (→ Fig 4) | Epilepsy Analysis | `pipelines/06` | data | **done** — underlying data exported alongside |
 | Constraint + GERP table | Constraint Measures Comparison | `pipelines/05` | slice | **blocked** — see note |
 | Figure 3a/3b | Constraint Measures Comparison | `pipelines/08` | slice | todo |
 | Figure 4a/4b (→ Fig 3C/3D) | Constraint Measures Comparison | `pipelines/08` | slice | todo |

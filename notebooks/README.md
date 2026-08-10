@@ -26,7 +26,7 @@ leaving them would present superseded numbers as authoritative.
 
 | Notebook | Superseded by | Still authoritative for |
 |---|---|---|
-| `Epilepsy Analysis.ipynb` | `pipelines/01`, `02` for the regression, tables and Table S1 | Figures 5a–d, Tables 1 and 2 |
+| `Epilepsy Analysis.ipynb` | `pipelines/01`, `02`, `06` — fully superseded | nothing |
 | `Constraint Measures Comparison.ipynb` | `pipelines/05` for the constraint+GERP table | Figures 3a/3b, 4a/4b |
 | `Schizophrenia Analysis.ipynb` | — | everything; extraction pending |
 | `HMM Mutation Predictions.ipynb` | — | Figure 1, and the HMM predictions themselves |
