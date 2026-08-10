@@ -50,7 +50,7 @@ edit to this file.
 | Table A1 comparison | Epilepsy Analysis | `pipelines/02` | full | **done** |
 | Tables 1 and 2 | Epilepsy Analysis | `pipelines/06` | full | **done** — gate: 28 pairs / 24 genes / STX1B |
 | Figure 5 (→ Fig 4) | Epilepsy Analysis | `pipelines/06` | data | **done** — underlying data exported alongside |
-| Constraint + GERP table | Constraint Measures Comparison | `pipelines/05` | slice | **blocked** — see note |
+| Constraint + GERP table | Constraint Measures Comparison | `pipelines/05` | full | **done** — md5 of decompressed output identical to published |
 | Figure 3a/3b | Constraint Measures Comparison | `pipelines/08` | slice | todo |
 | Figure 4a/4b (→ Fig 3C/3D) | Constraint Measures Comparison | `pipelines/08` | slice | todo |
 | Figure 2a/2b | RGC + AoU Predictions | `pipelines/09` | slice | todo |
@@ -63,13 +63,14 @@ edit to this file.
 
 ### Known blockers and defects
 
-**`pipelines/05` cannot be gated.** The published
-`HMM_rgc_ALL_RS_merged_predictions.tsv.gz` was overwritten on 2026-08-09 before
-being checksummed. The `--no-fix` rebuild is 577,698,217 bytes against the
-original's 578,236,931 — a 538 KB difference that is unexplained. Both rebuilds
-agree with each other to within 1,306 bytes, so the discrepancy is against the
-original specifically. Resolve before trusting any Figure 3C/3D comparison. Does
-not affect the epilepsy results, which never read this file.
+**`pipelines/05` is gated.** The `--no-fix` rebuild reproduces the published
+`HMM_rgc_ALL_RS_merged_predictions.tsv.gz` exactly: identical md5 of the
+decompressed content (c56b4f5d376cfc5d29975a9828db6848), 28,922,258 rows, identical
+header. An earlier note in this file claimed a 538 KB discrepancy and that the
+published file had been overwritten; both were wrong. The published file lives at the
+repository root (the notebook wrote it there via a relative path) while the pipeline
+writes to `results/`, so nothing was overwritten, and the 538 KB figure came from
+comparing against an unrelated file.
 
 **`Epilepsy Analysis.ipynb` still reimplements the pipeline** in cells 15, 16,
 19, 20 and 22, and its cell 16 still carries the *uncorrected* AlphaMissense
@@ -105,3 +106,11 @@ extracted and gated, the corresponding notebook cells are superseded — see
 `notebooks/README.md` for per-notebook status.
 
 The exact state behind the Revision 2 submission is tagged `AJHG-R2-submitted`.
+
+## Pinned artifact checksums
+
+Decompressed-content md5, so gzip metadata differences do not confuse comparisons.
+
+| Artifact | md5 (decompressed) |
+|---|---|
+| `HMM_rgc_ALL_RS_merged_predictions.tsv.gz` (as published, repo root) | `c56b4f5d376cfc5d29975a9828db6848` |
