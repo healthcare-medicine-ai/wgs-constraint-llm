@@ -40,7 +40,7 @@ for base in ["Figure 3a: HMM vs gnomAD missense z-score per gene",
     print(f"      differing {100*frac:.4f}%  max delta {d.max()}  "
           f"-> {'IDENTICAL' if frac==0 else 'differs'}")
     ok &= frac == 0
-print("
-GATE 09:", "PASS" if ok else "FAIL")
+print()
+print("GATE 09:", "PASS" if ok else "FAIL")
 sys.exit(0 if ok else 1)
 PY

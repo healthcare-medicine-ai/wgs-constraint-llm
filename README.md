@@ -110,48 +110,6 @@ No path is hardcoded. Resolution order:
 significance thresholds, the allele-count cut — so they are version-controlled
 rather than retyped per notebook cell.
 
-## Analysis choices worth knowing
-
-These are the points external groups have most often got wrong.
-
-| | |
-|---|---|
-| Rare-variant cut | **allele count**, `ac_case + ac_ctrl <= 5` — *not* a MAF filter |
-| Effect size | Haldane–Anscombe corrected log odds ratio from allele counts |
-| Variance | Woolf variance; weights are `1 / var_effect_size` |
-| Firth BETA/SE | **not used and not required** |
-| Moderators | five: HMM constraint, GERP RS, AlphaMissense, pLoF, missense |
-| Transforms | `-log1p(-x)` on constraint and pathogenicity; **GERP enters untransformed** |
-| Gene inclusion | `n_variants >= 25` |
-| Reported p-value | `model.f_pvalue`, the **whole-model F-test** — not a coefficient p-value |
-| Exome-wide significance | `p < 3.4e-7` |
-
-**This repository is not `rivas-lab/phenome-wide-unified-model`.** That project
-applies a related four-moderator model (no GERP) with `MAF <= 0.05` and
-pre-computed `BETA`/`SE` columns to phenome-wide biobank data. Its
-`unified_reg_MAF.05.py` will not reproduce the epilepsy results, and applying it
-to Epi25 yields substantially more significant genes because `MAF <= 0.05`
-admits variants roughly three orders of magnitude more common than `AC <= 5`.
-
-## Corrections, August 2026
-
-Two defects were found in the Revision 2 pipeline during an external
-reproduction attempt and corrected. Both are documented in
-`genentech_fix/README.md`, with per-gene attribution.
-
-1. **GERP coordinate off-by-one.** `pyBigWig.values()` returns a 0-based vector;
-   HMM positions are 1-based. Indexing one with the other shifted every GERP
-   score one base downstream. Old and corrected values correlate at r = 0.173 —
-   within coding sequence, adjacent bases differ sharply in constraint, so the
-   shift randomises rather than blurs. Fixed in `src/wgs_constraint/gerp.py`,
-   where the coordinate convention is now an explicit, validated argument.
-
-2. **AlphaMissense transcript fan-out.** `AlphaMissense_hg38.tsv.gz` is the
-   isoform-level release. Merged without de-duplication, a variant annotated on
-   N transcripts became N rows — inflating `n_variants` *and* its weight in the
-   WLS. Fixed in `src/wgs_constraint/alphamissense.py` by collapsing to one row
-   per variant by maximum pathogenicity.
-
 ## Tests
 
 ```bash
@@ -169,16 +127,38 @@ exactly_one_base` fails against the pre-correction code.
 
 ## Data
 
-Inputs are not redistributed here.
+Inputs are not redistributed here. Every one is checksummed in
+[`docs/INPUT_MANIFEST.md`](docs/INPUT_MANIFEST.md); verify a local copy with
+`python pipelines/00_input_manifest.py --verify`.
 
-| Input | Source |
-|---|---|
-| Epi25 variant results | https://epi25.broadinstitute.org/results |
-| GENCODE v44 basic annotation | GENCODE release 44 |
-| AlphaMissense (hg38, isoform-level) | Zenodo record 10813168 |
-| Genes4Epilepsy | https://github.com/bahlolab/Genes4Epilepsy |
-| WES constraint predictions (AoU, RGC-ME) | https://doi.org/10.6084/m9.figshare.27184245.v1 |
-| GERP RS, hg38 | lifted from the hg19 track with UCSC `hg19ToHg38.over.chain.gz`; see `genentech_fix/README.md` |
+| Input | File | Source |
+|---|---|---|
+| Epi25 variant results | — | https://epi25.broadinstitute.org/results |
+| GENCODE v44, basic annotation | `gencode.v44.basic.annotation.gtf.gz` | https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_44/gencode.v44.basic.annotation.gtf.gz |
+| AlphaMissense, hg38, isoform-level | `AlphaMissense_hg38.tsv.gz` | https://console.cloud.google.com/storage/browser/dm_alphamissense |
+| Genes4Epilepsy | — | https://github.com/bahlolab/Genes4Epilepsy |
+| gnomAD v4.0 constraint metrics | `gnomad.v4.0.constraint_metrics.tsv` | https://gnomad.broadinstitute.org/downloads |
+| SCHEMA variant and gene results | `SCHEMA_variant_results_hg38.tsv.gz`, `SCHEMA_gene_results.tsv.bgz` | https://schema.broadinstitute.org/ |
+| GERP RS, hg19 (liftover source) | `All_hg19_RS.bw` | https://genome-asia.ucsc.edu/cgi-bin/hgTables?db=hg19&hgta_group=compGeno&hgta_track=allHg19RS_BW&hgta_table=allHg19RS_BW |
+| UCSC chain, hg19 to hg38 | `hg19ToHg38.over.chain.gz` | https://hgdownload.soe.ucsc.edu/goldenPath/hg19/liftOver/hg19ToHg38.over.chain.gz |
+| **GERP RS, hg38 (lifted here)** | `All_hg38_RS.bw` | https://doi.org/10.6084/m9.figshare.33201549.v1 |
+| WES constraint predictions, AoU and RGC-ME | — | https://doi.org/10.6084/m9.figshare.27184245.v1 |
 
-Variant-level intermediates derived from Epi25 are controlled-access and are
-excluded by `.gitignore`.
+**Which GENCODE file matters.** Release 44 ships several GTFs and they give
+different CDS interval sets. This analysis uses the *basic* annotation,
+29,570,410 bytes, md5 `7450ef42cf9cb3d29625320b22d4bb45` — confirmed by byte
+match against the URL above. The `primary_assembly` file at the same release is
+49,730,393 bytes and is **not** what was used, and some notebook comments cite a
+`chr_patch_hapl_scaff` URL, which is a third, different file.
+
+**The hg38 GERP track was produced here, not downloaded.** UCSC publishes the
+hg19 track only. `All_hg38_RS.bw` (16.4 GB, md5
+`10a03ee7969d3000ffd2e6e6f84f2453`) was lifted from `All_hg19_RS.bw` with the
+chain above, using `bigWigLiftOver` with no options. Its positional correctness
+was verified by sampling: of 1,500 informative positions, 1,498 carry the hg19
+value at the chain-mapped hg38 coordinate at offset 0, and none at plus or minus
+one or two bases (`genentech_fix/verify_liftover.py`).
+
+Variant-level intermediates derived from Epi25 are controlled access and are
+excluded by `.gitignore`. They cannot be redistributed; `pipelines/01` rebuilds
+them from the sources above.

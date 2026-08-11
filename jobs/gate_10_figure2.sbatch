@@ -39,7 +39,7 @@ for base in ["Figure 2a: observed joint distribution of RGC vs AoU WES constrain
     d=np.abs(aa-bb); frac=(d.max(axis=2)>0).mean()
     print(f"      differing {100*frac:.4f}%  max delta {d.max()}  -> {'IDENTICAL' if frac==0 else 'differs'}")
     ok &= frac == 0
-print("
-GATE 10:", "PASS" if ok else "FAIL")
+print()
+print("GATE 10:", "PASS" if ok else "FAIL")
 sys.exit(0 if ok else 1)
 PY

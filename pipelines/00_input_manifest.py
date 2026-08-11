@@ -35,8 +35,10 @@ CHUNK = 8 * 1024 * 1024
 # (config key or literal path, kind, why it matters)
 INPUTS = [
     ("data:gene_annotation", "raw",
-     "GENCODE v44 primary assembly. NOTE: notebook comments cite the "
-     "chr_patch_hapl_scaff URL, which is a different, larger file."),
+     "GENCODE v44 BASIC annotation, 29,570,410 bytes -- confirmed by byte "
+     "match against the GENCODE release_44 URL. Not the primary_assembly "
+     "file (49,730,393 bytes), and not the chr_patch_hapl_scaff file that "
+     "some notebook comments cite. The three give different CDS sets."),
     ("data:epi25_variants", "raw", "Epi25 summary statistics (controlled access)"),
     ("data:alphamissense", "raw",
      "AlphaMissense hg38, ISOFORM-level release -- must be collapsed per variant"),
