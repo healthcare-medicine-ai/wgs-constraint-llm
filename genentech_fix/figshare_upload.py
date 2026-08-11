@@ -24,7 +24,6 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import os
 import sys
 import time
 from pathlib import Path
@@ -86,7 +85,7 @@ def md5_of(path: Path) -> str:
             if now - last > 5:
                 print(f"\r  hashing {100*done/total:5.1f}%", end="", flush=True)
                 last = now
-    print(f"\r  hashing 100.0%")
+    print("\r  hashing 100.0%")
     return h.hexdigest()
 
 
@@ -154,7 +153,7 @@ def main():
     if remote_md5 and remote_md5 != md5:
         sys.exit("  MISMATCH -- do not publish this item until resolved")
     print("  match. Upload complete.")
-    print(f"\nThe item is still a draft; publish it in the web UI to mint a DOI.")
+    print("\nThe item is still a draft; publish it in the web UI to mint a DOI.")
 
 
 if __name__ == "__main__":

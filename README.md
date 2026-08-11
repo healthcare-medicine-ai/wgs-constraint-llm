@@ -22,11 +22,16 @@ src/wgs_constraint/    importable logic shared by notebooks and pipelines
   gerp.py                GERP RS annotation  <- coordinate conventions live here
   alphamissense.py       AlphaMissense loading and per-variant collapse
   epi25.py               Epi25 loading, filters, effect sizes
-pipelines/             end-to-end scripts, runnable non-interactively
-jobs/                  Slurm wrappers
+  metareg.py             shared WLS meta-regression
+  gene_constraint.py     per-gene constrained fractions
+pipelines/             end-to-end stages, runnable non-interactively
+jobs/                  Slurm wrappers, one per stage or gate
 tests/                 pytest suite; no cluster data required
-notebooks/             exploratory and figure notebooks
+notebooks/             ARCHIVED implementations -- read, do not run
+docs/                  overhaul plan, input manifest with checksums
+genentech_fix/         August 2026 correction workspace and diagnostics
 results/               gene-level outputs and figures
+pyproject.toml         packaging, pytest and ruff configuration
 ```
 
 Anything that produces a number in the manuscript runs from `pipelines/`.
@@ -53,8 +58,33 @@ On Slurm:
 sbatch --job-name=fixed jobs/run_pipeline.sbatch fixed
 ```
 
-`pipelines/03_compare_runs.py` diffs any run against another;
-`pipelines/04_attribution.py` isolates the effect of each correction.
+`genentech_fix/03_compare_runs.py` diffs any run against another;
+`genentech_fix/04_attribution.py` isolates the effect of each correction. Both
+need the Revision 2 baseline snapshot, which stays on the cluster.
+
+### Every stage
+
+`pipelines/` is numbered by dependency order, not contiguously -- 03, 04 and 07
+were folded into other stages or into `genentech_fix/` and the numbers were left
+alone so existing references keep resolving.
+
+| Stage | Produces |
+|---|---|
+| `00_input_manifest.py` | `docs/INPUT_MANIFEST.md`; `--verify` rechecks every input |
+| `01_build_regression_input.py` | Epi25 variant-level regression input |
+| `02_run_metaregression.py` | per-gene WLS p-values |
+| `05_build_constraint_gerp_predictions.py` | constraint + GERP prediction table |
+| `06_epilepsy_tables_and_figures.py` | Tables 1 and 2, Figure 5 |
+| `08_hmm_gerp_joint_distribution.py` | Figures 4a, 4b |
+| `09_gene_constraint_figures.py` | Figures 3a, 3b |
+| `10_rgc_aou_joint.py` | Figures 2a, 2b |
+| `11_schizophrenia.py` | SCHEMA replication, Table A2, Figure A1 |
+| `12_figure1_scn1a.py` | Figure 1 |
+
+Every stage takes `--no-fix` or an equivalent published-fidelity flag, so the
+Revision 2 output can be regenerated for comparison. `jobs/gate_*.sbatch` runs
+each against its published artifact; all seven published figures reproduce
+pixel-identically.
 
 ### Reproducing the *submitted* Revision 2 numbers
 
@@ -125,10 +155,14 @@ reproduction attempt and corrected. Both are documented in
 ## Tests
 
 ```bash
-PYTHONPATH=src pytest tests/ -q
+pytest -q
 ```
 
-Runs in seconds against synthetic fixtures; no cluster data needed. The GERP
+Runs in seconds against synthetic fixtures; no cluster data needed --
+`pyproject.toml` puts `src/` on the path. GitHub Actions runs the suite and
+`ruff check` on every push and pull request (`.github/workflows/ci.yml`). CI
+cannot verify the analysis itself: every real input is either controlled-access
+or hundreds of gigabytes. Reproduction gates run on Sherlock. The GERP
 tests build a small bigWig whose value at each base is known, so a one-base
 shift is arithmetic rather than judgement — `test_the_two_conventions_differ_by_
 exactly_one_base` fails against the pre-correction code.

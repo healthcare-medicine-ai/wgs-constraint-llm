@@ -1,0 +1,49 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "wgs-constraint"
+version = "1.0.0"
+description = "Unified meta-regression of constraint, conservation and pathogenicity for gene-disease association"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { file = "LICENSE" }
+
+# Exact pins live in requirements.txt, which is what reproduces the published
+# numbers. These are floors: enough to install the package, not enough to
+# guarantee bit-identical results. Reproducing the manuscript means
+# requirements.txt, not this list.
+dependencies = [
+    "numpy>=1.24",
+    "pandas>=1.5",
+    "scipy>=1.11",
+    "statsmodels>=0.14",
+    "pyBigWig>=0.3.22",
+    "matplotlib>=3.7",
+    "seaborn>=0.12",
+    "tqdm>=4.65",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.4", "ruff>=0.6"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+# Puts src/ on the path so the suite runs from a clean checkout without an
+# editable install and without a conftest.py path hack. Requires pytest >= 7.
+pythonpath = ["src"]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+# genentech_fix/ is the August 2026 correction workspace: one-off diagnostics
+# written to answer a single question and keep as a record of how it was
+# answered. They are not maintained code and are deliberately not linted.
+# notebooks/ are archived implementations -- see notebooks/README.md.
+exclude = ["genentech_fix", "notebooks", "all results"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W"]

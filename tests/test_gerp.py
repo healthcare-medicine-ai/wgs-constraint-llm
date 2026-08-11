@@ -7,7 +7,6 @@ value at every base, so any off-by-one is unambiguous rather than plausible.
 Run:  pytest tests/ -v
 """
 
-import numpy as np
 import pandas as pd
 import pyBigWig
 import pytest

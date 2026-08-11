@@ -162,7 +162,7 @@ def main():
     print(f"FIGURE 3 SUMMARY [{suffix.lstrip('_')}]")
     print("=" * 64)
     print(f"  CDS intervals            : {len(gene_constraint):,}")
-    print(f"  panel A threshold        : P(0) > 0.5")
+    print("  panel A threshold        : P(0) > 0.5")
     print(f"  panel B threshold        : P(0) > {thr_label}")
     print(f"  panel A R2 (computed)    : {r2_a:.4f}")
     print(f"  panel B R2 (computed)    : {r2_b:.4f}")

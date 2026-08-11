@@ -6,7 +6,6 @@ genes changed exome-wide significance. The last test states that mechanism
 directly.
 """
 
-import numpy as np
 import pandas as pd
 import pytest
 
@@ -94,6 +93,7 @@ def test_uncollapsed_merge_inflates_both_count_and_weight():
 
     assert len(naive) == 4 and len(fixed) == 2
 
-    weight = lambda d: (1 / d["var_effect_size"]).sum()
+    def weight(d):
+        return (1 / d["var_effect_size"]).sum()
     # The first variant's weight is tripled relative to the second.
     assert weight(naive) == pytest.approx(2 * weight(fixed))

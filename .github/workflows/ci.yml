@@ -1,0 +1,46 @@
+name: ci
+
+# What this can and cannot check. Every input to the analysis is either
+# controlled-access (Epi25), hundreds of gigabytes (the GERP bigWig), or both,
+# so none of it can live on a runner. CI therefore checks that the shared
+# library is correct against synthetic fixtures -- including the two defects
+# corrected in August 2026, each of which has a test that fails against the
+# pre-correction code.
+#
+# Reproducing the manuscript is a separate matter and runs on Sherlock via
+# jobs/*.sbatch. See docs/OVERHAUL_PLAN.md for the gate rules.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  lint:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install ruff==0.6.9
+      - run: ruff check .
+
+  test:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      # pyBigWig links against libcurl and zlib and has no universal wheel.
+      - name: system libraries for pyBigWig
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libcurl4-openssl-dev zlib1g-dev
+      # The exact pins that produced the published numbers.
+      - run: pip install -r requirements.txt
+      - run: pip install -e .
+      - run: pytest -q

@@ -26,7 +26,7 @@ import numpy as np
 import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
-from wgs_constraint import (  # noqa: E402
+from wgs_constraint import (  # noqa: E402,F401
     GROUP_KEY, MODERATORS, fit_per_gene, get_config, prepare_regression_input,
 )
 
