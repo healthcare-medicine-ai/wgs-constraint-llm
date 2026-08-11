@@ -56,8 +56,21 @@ def load_epi25_variants(
     df[VARIANT_KEY] = df["variant_id"].str.split(":", expand=True)
     df["pos"] = df["pos"].astype(int)
 
-    df = df[~df["chr"].isin(set(excluded_chromosomes))]
-    df = df[~df["consequence"].isin(set(excluded_consequences))]
+    # Chained != rather than .isin(). They select identical rows, but they
+    # build the resulting frame by different internal paths, and that changes
+    # its memory layout -- which changes the vectorised loop numpy picks for
+    # np.log downstream, perturbing effect_size in the last bit. Matching the
+    # original expression keeps the pipeline bit-identical to the submitted
+    # results. Verified: .isin() gives p-values agreeing only to 1e-12.
+    chrom_mask = pd.Series(True, index=df.index)
+    for excluded in excluded_chromosomes:
+        chrom_mask &= (df["chr"] != excluded)
+    df = df[chrom_mask]
+
+    consequence_mask = pd.Series(True, index=df.index)
+    for excluded in excluded_consequences:
+        consequence_mask &= (df["consequence"] != excluded)
+    df = df[consequence_mask]
 
     return pd.merge(
         df,

@@ -243,3 +243,49 @@ bit-identical gate is a far stronger claim than "agrees to fifteen decimals",
 and a perturbed effect size feeds the weighted least squares where a borderline
 p-value could in principle flip. The comment in `metareg.py` records why the
 line is missing so nobody helpfully adds it back.
+
+## The schizophrenia results cannot be regenerated from current inputs
+
+`pipelines/11` reproduces the published SCZ results **exactly** when run against
+the cached variant table `constraint_gerp_am_scz_variants.tsv.gz` (dated
+2025-09-15): 190,328 models against the published 190,328, perfect gene-group
+overlap, and 100% bit-identical `n_variants`. The port is correct.
+
+Regenerating that cached table from today's inputs instead produces **192,286**
+gene-groups, 1,958 more, and only ~9% of p-values agree. So something upstream
+of the SCZ analysis has changed since September 2025.
+
+The likely cause is the HMM constraint predictions, which were rebuilt on
+2026-02-22. The epilepsy analysis was re-run afterwards, in February 2026; the
+schizophrenia analysis was not — its outputs are dated October 2025 and the
+notebook was never modified for Revision 2.
+
+**Implication for the manuscript.** The epilepsy and schizophrenia results in
+the submitted paper may rest on different versions of the same constraint
+predictions. This is independent of the GERP and AlphaMissense defects. It needs
+a decision before Revision 3: either re-run the schizophrenia analysis against
+current inputs and report the updated numbers, or establish that the difference
+is immaterial. Do not simply regenerate and swap the numbers in without
+understanding what changed.
+
+Diagnostics: `jobs/diag_scz_cached.sbatch`, `logs/sczcached_*.out`.
+
+## Bit-exactness is fragile in ways that are not obvious
+
+Two separate refactors, each of which looked semantically inert, perturbed
+`effect_size` by one unit in the last place and thereby changed p-values in the
+fifteenth decimal:
+
+1. Adding `.copy()` after a boolean mask.
+2. Replacing chained `!=` comparisons with `.isin()`.
+
+Both select identical rows. Both change the resulting frame's memory layout,
+which changes the vectorised loop numpy selects for `np.log`. Measured effect on
+the published p-values: 100% agree within 1e-12, but only ~56-75% are
+bit-identical.
+
+That difference is scientifically meaningless -- no gene changes significance --
+but a bit-identical gate is a much stronger claim than "agrees to twelve
+figures", and it costs nothing to preserve. Both changes were reverted, with
+comments in `epi25.py` and `metareg.py` explaining why the tidier form is not
+used. **Do not "clean up" those expressions.**
