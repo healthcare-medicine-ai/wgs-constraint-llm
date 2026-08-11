@@ -16,6 +16,30 @@ they can be decided on deliberately:
     to put both on 0.5, as the Revision 3 plan proposes.
   * Cell 28 annotated panel B with a hardcoded "$R^2=0.152$" rather than the
     computed value. This stage always computes it, and reports the difference.
+  * Panel B is labelled "per gene" but is actually one row per CDS *interval*.
+    That matters more than a mislabel: the Revision 2 response letter tells the
+    reviewer panel B was changed to per transcript, "improved the R2 from 0.146
+    to 0.300", and the caption agrees -- but the submitted figure is the
+    per-interval version at P(0) > 0.6 with R2 = 0.152, and no per-transcript
+    figure exists anywhere in this repository. Measured on the cluster
+    (genentech_fix/diag_figure3b_granularity.py):
+
+                                        P(0)>0.5   P(0)>0.6
+        per CDS interval                  0.1458     0.1531
+        per transcript, unweighted mean   0.3058     0.3177
+        per transcript, length-weighted   0.3368     0.3490
+
+    Both of the letter's numbers reproduce, at threshold 0.5: 0.1458 is its
+    "was 0.146", and 0.3058 is its "0.300" -- so the analysis it describes was
+    aggregation to transcript by *unweighted mean* of the per-interval
+    proportions. The figure was simply never regenerated afterwards.
+
+    Note that the unweighted mean gives a 30 bp exon the same say as a 3 kb one.
+    Length-weighting is the more defensible choice and yields a *higher* 0.3368,
+    so redoing this properly strengthens the claim rather than weakening it.
+
+    This stage deliberately still reproduces the submitted figure. Switching it
+    is a Revision 3 decision, not a correction -- do not make it silently.
 
   python pipelines/09_gene_constraint_figures.py --as-published   # gate
   python pipelines/09_gene_constraint_figures.py                  # corrected
@@ -134,6 +158,15 @@ def main():
         f"(notebook hardcoded {HARDCODED_R2_PANEL_B})")
 
     log("[4/4] rendering ...")
+    # --as-published must reproduce the submitted panel exactly, and the
+    # submitted panel carries a hardcoded label. Computing it instead left 314
+    # pixels differing in a 21x32 box -- one glyph, the 2 of 0.152 against the
+    # 3 of 0.153 -- which is a real gate failure for a cosmetic reason. The
+    # corrected path always shows the computed value.
+    label_b = HARDCODED_R2_PANEL_B if args.as_published else r2_b
+    if args.as_published and abs(label_b - r2_b) > 1e-4:
+        log(f"      panel B label pinned to the published {label_b} "
+            f"(computed {r2_b:.4f}) so the gate can demand pixel-exactness")
     scatter_panel(
         gene_constraint, col_a, "mis.z_score",
         xlabel=r"Fraction of coding bases with $\mathbb{P}(0) > 0.5$",
@@ -148,7 +181,7 @@ def main():
         xlabel=rf"Proportion of gene with $\mathbb{{P}}(0) > {thr_label}$",
         ylabel="Missense Tolerance Ratio",
         title="HMM Constraint vs MTR per gene",
-        xlim=(0, 0.7), ylim=(0.7, 1.1), r2=r2_b, r2_at=(0.5, 1.05),
+        xlim=(0, 0.7), ylim=(0.7, 1.1), r2=label_b, r2_at=(0.5, 1.05),
         out_path=cfg.result(f"{FIG_3B}{suffix}.png"))
 
     keep = ["chr", "start", "end", "length", "gene_name", "transcript",

@@ -36,6 +36,26 @@ def haldane_effect_sizes(df: pd.DataFrame, *, max_allele_count: int = 5
 
     The cut is on **allele count**, not frequency: across Epi25's ~108,800
     alleles ``ac_case + ac_ctrl <= 5`` is a MAF of roughly 5e-5.
+
+    .. warning::
+       **How you filtered ``df`` before calling this changes the answer's last
+       bit.** ``np.log`` below picks its vectorised loop from the array's memory
+       layout, and boolean masking, ``.isin()`` and ``.copy()`` each build that
+       array differently. They select identical rows and give identical values
+       to about fifteen figures -- but not bit-identical ones, so a reproduction
+       gate fails.
+
+       Filter with chained ``!=`` comparisons, matching the original notebooks,
+       not ``.isin()``. In ``epi25.py`` that change was measured to restore
+       bit-identity. In ``pipelines/11`` the same change made no difference at
+       all -- ``effect_size`` stayed 80.38% bit-identical either way -- so the
+       memory-layout account is at best incomplete, and matching the notebook
+       literally is the reliable rule rather than the explanation for it.
+
+       If you are writing a new caller, copy the filtering style from
+       ``epi25.load_epi25_variants`` rather than writing the tidy version, and
+       gate the result. Do not assume a tidier form is safe because you have a
+       story for why it should be.
     """
     # No .copy() here, deliberately. Boolean masking already returns a new
     # frame; adding a second copy changes the array's memory layout, which
