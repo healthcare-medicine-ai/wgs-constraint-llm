@@ -148,3 +148,65 @@ MTR per gene" (cell 36), and a copy with a newline in its filename.
 `calculate_overlap` is byte-identical in cells 20 and 30; cell 30 merely
 recomputes `proportion_over_50` redundantly. An earlier draft of this file
 speculated the two panels used different overlap logic -- they do not.
+
+## Session of 2026-08-11
+
+### Stages added
+
+| Stage | Produces | Extracted from |
+|---|---|---|
+| `pipelines/00_input_manifest.py` | `docs/INPUT_MANIFEST.md`, checksums of every input | — |
+| `pipelines/09_gene_constraint_figures.py` | Figures 3a, 3b | Constraint Measures Comparison 28, 32 |
+| `pipelines/10_rgc_aou_joint.py` | Figures 2a, 2b | RGC + AoU Predictions 8, 9 |
+| `pipelines/11_schizophrenia.py` | SCZ results, Figure A1, table A2 | Schizophrenia Analysis 15-21 |
+| `pipelines/12_figure1_scn1a.py` | Figure 1 | HMM Mutation Predictions 21, 22 |
+
+New shared modules: `metareg.py` (the meta-regression, previously duplicated
+verbatim between the epilepsy and schizophrenia notebooks) and
+`gene_constraint.py` (CDS-interval aggregation).
+
+### Two lessons about gates, learned the hard way
+
+**Never compare gzipped files byte-for-byte.** gzip writes a timestamp into its
+header, so identical data produces different compressed bytes and different
+md5s. `gate01` failed spuriously for this reason while every row count matched.
+Always compare the decompressed stream.
+
+**Published figures were saved at dpi=300.** The notebooks call bare
+`plt.savefig(path)`, which uses matplotlib's default of 100, so a naive
+extraction renders at exactly one third the published dimensions and cannot be
+pixel-compared. All figure stages now pass `dpi=300`.
+
+### Findings
+
+**Figure 3b's R² label is wrong.** The notebook annotates the panel with a
+hardcoded `$R^2=0.152$`. The computed value is **0.1531**. Small, but it proves
+the hardcoded label had already drifted from the data before publication.
+
+**Figure 1 shows 4.2% of SCN1A.** The crop offsets (+750, -4700) reduce a
+5,691-position gene to a **241-position window**. The caption reads "observed vs
+predicted mutations for SCN1A", which implies the whole gene. It is a
+representative window and the caption should say so.
+
+**`Constraint Measures Comparison` cell 18 is a latent hazard.** It is a
+byte-identical copy of the Figure 2a/2b plotting code from `RGC + AoU
+Predictions` cell 9, but in that notebook the variables it plots are left over
+from cell 16, the HMM-versus-GERP distribution on a 10x18 grid. Running that
+notebook top to bottom overwrites Figures 2a and 2b with mislabelled GERP data
+on axes captioned "RGC" and "AoU". Delete that cell.
+
+**`SCZ Liftover.ipynb` is the best code in the repository** and should be the
+model for the rest: it empirically detects whether input coordinates are 0- or
+1-based by trying both and counting successful mappings, rather than assuming.
+Had the GERP merge done the same, the defect that prompted all of this could not
+have occurred.
+
+### Pinned artifacts, not extracted
+
+These generate inputs, take hours, and are distributed externally. They are
+checksummed in `docs/INPUT_MANIFEST.md` and must not be re-derived:
+`HMM Mutation Predictions.ipynb` (the RGC-ME predictions),
+`AoU Mutation Predictions.ipynb` (the AoU predictions),
+`SCZ Liftover.ipynb` (SCHEMA and scz.tsv.gz lifted to hg38).
+`Constraint + AM Analysis.ipynb` is exploratory and produces nothing the
+manuscript cites.
