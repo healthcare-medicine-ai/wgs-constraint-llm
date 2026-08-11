@@ -39,10 +39,38 @@ from wgs_constraint import (  # noqa: E402
 from wgs_constraint.alphamissense import KEY_COLUMNS, load_uncollapsed  # noqa: E402
 from wgs_constraint.epi25 import load_gene_annotation  # noqa: E402
 
-# SCHEMA consequence vocabulary (notebook cell 15).
+# SCHEMA consequence vocabulary.
+#
+# Cell 15 of the notebook lists ten exclusions, six of them commented out. Taking
+# the file at face value -- only the four uncommented entries -- regenerates
+# 178,821 rows the September 2025 cached merge does not contain, every one of
+# them neither pLoF nor missense.
+#
+# Those six were recovered empirically: joining the cached merge back to the
+# SCHEMA source shows intron, splice_region, 3'/5' UTR and upstream/downstream
+# variants absent from it entirely, while every coding consequence is fully
+# present (see genentech_fix/diag_scz_consequences.py). So the submitted analysis
+# ran with all ten active, and the comment characters were added afterwards. The
+# notebook's current state does not describe the published results.
+#
+# Restoring all ten reproduces the cached merge exactly. This is the analysis
+# definition, not one of the two corrections, so it applies on both paths.
+#
+# Only these four actually occur in SCHEMA: coding_sequence_variant,
+# synonymous_variant, intron_variant, splice_region_variant, 3_prime_UTR_variant,
+# 5_prime_UTR_variant, upstream_gene_variant, downstream_gene_variant. The rest
+# are inert and kept only to mirror the notebook.
 EXCLUDED_CONSEQUENCES = [
-    "coding_sequence_variant", "mature_miRNA_variant", "null",
+    "3_prime_UTR_variant",
+    "5_prime_UTR_variant",
+    "coding_sequence_variant",
+    "downstream_gene_variant",
+    "intron_variant",
+    "mature_miRNA_variant",
+    "null",
+    "splice_region_variant",
     "synonymous_variant",
+    "upstream_gene_variant",
 ]
 PLOF_CONSEQUENCES = [
     "stop_gained", "splice_acceptor_variant", "splice_donor_variant",
@@ -71,7 +99,18 @@ def load_variants(cfg, genes):
     path = cfg.data_dir / "SCHEMA_variant_results_hg38.tsv.gz"
     df = pd.read_csv(path, sep="\t", compression="gzip")
 
-    df = df[~df["chr"].isin(cfg.param("excluded_chromosomes"))]
+    # Chained != rather than .isin(), matching cell 15 literally. Kept for
+    # fidelity, but be clear about what it did NOT do: switching to this form
+    # left effect_size bit-identical to the cached merge on exactly 80.38% of
+    # rows, the same figure as with .isin(). So the remaining difference is not
+    # this filter, and the memory-layout explanation that worked for epi25.py
+    # does not transfer here. Cause still unidentified -- see
+    # docs/OVERHAUL_PLAN.md. The consequence filter below stays .isin() because
+    # that is what cell 15 uses.
+    chrom_mask = pd.Series(True, index=df.index)
+    for excluded in cfg.param("excluded_chromosomes"):
+        chrom_mask &= (df["chr"] != excluded)
+    df = df[chrom_mask]
     df = df[~df["consequence"].isin(EXCLUDED_CONSEQUENCES)]
     df = df[~df["consequence"].isna()]
 

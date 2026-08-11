@@ -244,34 +244,27 @@ and a perturbed effect size feeds the weighted least squares where a borderline
 p-value could in principle flip. The comment in `metareg.py` records why the
 line is missing so nobody helpfully adds it back.
 
-## The schizophrenia results cannot be regenerated from current inputs
+## Results with no stage that regenerates them
 
-`pipelines/11` reproduces the published SCZ results **exactly** when run against
-the cached variant table `constraint_gerp_am_scz_variants.tsv.gz` (dated
-2025-09-15): 190,328 models against the published 190,328, perfect gene-group
-overlap, and 100% bit-identical `n_variants`. The port is correct.
+`results/epilepsy_unified_model_pvalues_MINUS_*.tsv`,
+`meta_FULL_all_moderators.tsv` and
+`unified_pvalue_comparison_WITH_vs_WITHOUT_log_constraint.tsv` were committed
+with the Revision 2 snapshot and are referenced by no document and produced by
+no pipeline stage. They are not junk: they are the leave-one-out moderator
+analysis backing **Supplementary Figures S1-S4**, added in response to
+Reviewer 1 (response letter item 10, "we compared the full model against models
+with each annotation removed in turn"). Keep them. But until a stage produces
+them they cannot be regenerated, and the corrections change them, so S1-S4 are
+stale in exactly the way the main figures were.
 
-Regenerating that cached table from today's inputs instead produces **192,286**
-gene-groups, 1,958 more, and only ~9% of p-values agree. So something upstream
-of the SCZ analysis has changed since September 2025.
+## Figure 3b describes an analysis the submitted figure does not contain
 
-An earlier draft of this file blamed the HMM predictions being rebuilt on
-2026-02-22. That was wrong: the base predictions
-`HMM_rgc_0.9_over20_chr2_predictions_rgc_wes.tsv.gz` are dated 2024-09-04 and
-have not changed. What was rebuilt in February was the GERP-merged derivative,
-which the schizophrenia pipeline never reads. **The cause is still unknown.** The epilepsy analysis was re-run afterwards, in February 2026; the
-schizophrenia analysis was not — its outputs are dated October 2025 and the
-notebook was never modified for Revision 2.
-
-**Implication for the manuscript.** The epilepsy and schizophrenia results in
-the submitted paper may rest on different versions of the same constraint
-predictions. This is independent of the GERP and AlphaMissense defects. It needs
-a decision before Revision 3: either re-run the schizophrenia analysis against
-current inputs and report the updated numbers, or establish that the difference
-is immaterial. Do not simply regenerate and swap the numbers in without
-understanding what changed.
-
-Diagnostics: `jobs/diag_scz_cached.sbatch`, `logs/sczcached_*.out`.
+See the docstring of `pipelines/09_gene_constraint_figures.py` for the measured
+numbers. Short version: the response letter and the manuscript caption both say
+panel B is per transcript with R2 = 0.300; the submitted figure is per CDS
+interval at P(0) > 0.6 with a hardcoded R2 = 0.152. The letter's "was 0.146"
+reproduces exactly as the per-interval value at 0.5. This stage reproduces what
+was submitted. Reconciling it is Revision 3 work.
 
 ## Bit-exactness is fragile in ways that are not obvious
 
@@ -293,19 +286,82 @@ figures", and it costs nothing to preserve. Both changes were reverted, with
 comments in `epi25.py` and `metareg.py` explaining why the tidier form is not
 used. **Do not "clean up" those expressions.**
 
-### Schizophrenia: what the diagnostics established, 2026-08-11
+## Schizophrenia: resolved, 2026-08-11
+
+For most of a day this looked like an input-provenance problem. It was a
+transcription error in the port, and the reasoning that pointed away from it was
+wrong. Both halves are worth recording.
+
+**The symptom.** `pipelines/11` reproduced the published results exactly when fed
+the cached 2025-09-15 merge — 190,328 models against 190,328, `n_variants` 100%
+bit-identical. Regenerating that merge from the same inputs instead produced
+178,821 extra rows and 1,958 extra gene-groups.
+
+**The wrong turn.** The extra rows were spread across every chromosome, every
+ancestry group and 12,441 genes, and I concluded that a filter difference "would
+cluster on one chromosome, consequence or group. This does not." That inference
+was simply invalid. A *consequence* filter is orthogonal to chromosome, gene and
+ancestry, so removing one scatters rows across all three by construction.
+Diffuseness was evidence for the filter hypothesis, not against it. Acting on
+that conclusion sent the investigation upstream into file dates and figshare
+rebuilds, none of which was relevant.
+
+**What actually found it.** Not more hypotheses — one measurement. Comparing the
+*null pattern* of the extra rows against the file as a whole: 90% of them lacked
+an AlphaMissense score against a 14% baseline. AlphaMissense only scores missense
+SNVs, so the extras were concentrated in variants it cannot score. The follow-up
+crosstab was decisive: 100% of the extra rows were neither pLoF nor missense.
+
+**The cause.** Cell 15 of `Schizophrenia Analysis.ipynb` lists ten excluded
+consequences, six of them commented out. I transcribed the four uncommented
+ones. Joining the cached merge back to the SCHEMA source shows that
+`intron_variant`, `splice_region_variant`, `3_prime_UTR_variant`,
+`5_prime_UTR_variant`, `upstream_gene_variant` and `downstream_gene_variant` are
+absent from it *entirely*, while every coding consequence is fully present. The
+submitted analysis ran with all ten active; the comment characters were added
+afterwards. **The notebook's current state does not describe the published
+results.**
+
+Two details corroborate it. The residue matches exactly: the 9,776 rows in the
+cache that are neither pLoF nor missense are `start_lost` (9,768) plus
+`incomplete_terminal_codon_variant` (5) and a few `stop_retained_variant` — all
+consequences no version of the list excludes. And of the four entries left
+uncommented, only `coding_sequence_variant` and `synonymous_variant` occur in
+SCHEMA at all; `mature_miRNA_variant` and `null` never appear. The visible list
+was almost entirely inert.
+
+**The fix (gate in flight at the time of writing).** `EXCLUDED_CONSEQUENCES`
+in `pipelines/11` now carries all ten, with
+the recovery argument in a comment so nobody "tidies" it back. This is the
+analysis definition rather than one of the two corrections, so it applies on both
+the `--no-fix` and `--fix` paths. Gated by `jobs/gate_11_scz.sbatch`, which now
+checks the merged input against the cache before checking the fitted p-values —
+the earlier gate only checked p-values and so could not see this.
+
+**Consequence for the corrected numbers.** The previously recorded "no
+exome-wide significant genes, against three published" was computed on the
+contaminated input and is void. The corrected result must be re-derived from the
+restored filter before it goes anywhere near the manuscript.
+
+**The transferable lesson.** A commented-out line in a notebook is not evidence
+about what was run. Where a cached output exists, recover the parameters from
+the output rather than reading them off the source — that is what settled this,
+and it took one join.
+
+### Schizophrenia: superseded diagnostic notes, 2026-08-11
+
 
 **The port is correct.** Run against the cached 2025-09-15 input, `pipelines/11`
 reproduces the published results exactly: 190,328 models against 190,328,
 perfect gene-group overlap, `n_variants` 100% bit-identical.
 
-**The input difference is diffuse, not a filter bug.** Regenerating the merged
+**(WRONG — see above.) The input difference is diffuse, not a filter bug.** Regenerating the merged
 input yields 178,821 extra rows spread across every chromosome, every ancestry
 group (meta 99,981, EUR 28,955, AFR 11,702, and so on) and 12,441 distinct
 genes. A missing or mis-specified filter would cluster on one chromosome,
 consequence or group. This does not. Cause not yet identified.
 
-**Corrected result, confounded.** With both defects fixed, the schizophrenia
+**(VOID — computed on the contaminated input.) Corrected result, confounded.** With both defects fixed, the schizophrenia
 analysis finds **no exome-wide significant genes**, against three published
 (PCDHA4, PCDHGA5, XPO7). Two of the three are protocadherins, consistent with
 the AlphaMissense fan-out that inflated the same family in the epilepsy
