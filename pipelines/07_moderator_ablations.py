@@ -84,8 +84,12 @@ def render(full, without, label, figure, cfg, suffix):
         merged[col] = pd.to_numeric(merged[col], errors="coerce")
     merged = merged[(merged["p_unified_full"] > 0)
                     & (merged["p_unified_without"] > 0)].copy()
-    merged["y"] = -np.log10(merged["p_unified_full"])
-    merged["x"] = -np.log10(merged["p_unified_without"])
+    # .to_numpy(dtype=float) rather than relying on the pd.to_numeric above.
+    # scipy's f.sf returns a 0-d array for some models, so fit_per_gene's
+    # p_unified arrives as an object column, and np.log10 over objects raises
+    # rather than vectorising. Stage 11 hit the same thing.
+    merged["y"] = -np.log10(merged["p_unified_full"].to_numpy(dtype=float))
+    merged["x"] = -np.log10(merged["p_unified_without"].to_numpy(dtype=float))
     merged.replace([np.inf, -np.inf], np.nan, inplace=True)
     merged = merged.dropna(subset=["x", "y"])
 
@@ -181,8 +185,8 @@ def main():
                            on=["gene_id", "group"], suffixes=("", "_abl"))
         without = pd.to_numeric(joined["p_unified_abl"], errors="coerce")
         base = pd.to_numeric(joined["p_unified"], errors="coerce")
-        sig[stem] = (np.log10(without.to_numpy())
-                     - np.log10(base.to_numpy()))
+        sig[stem] = (np.log10(without.to_numpy(dtype=float))
+                     - np.log10(base.to_numpy(dtype=float)))
     cols = [stem for stem, _ in singles]
     sig["dominant"] = sig[cols].idxmax(axis=1)
     table = cfg.result("moderator_attribution" + suffix + ".tsv")

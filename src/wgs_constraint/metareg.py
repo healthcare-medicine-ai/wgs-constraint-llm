@@ -112,6 +112,14 @@ def fit_per_gene(input_df: pd.DataFrame, *, moderators: list[str] | None = None,
     regression, not a coefficient p-value. External groups have repeatedly
     misread this as a coefficient test.
 
+    .. note::
+       ``p_unified`` may come back as an **object** column. ``scipy.stats.f.sf``
+       returns a 0-d array rather than a scalar for some models, and one such
+       value makes pandas infer object dtype for the whole column. ``np.log10``
+       then raises instead of vectorising. Callers taking logs should use
+       ``.to_numpy(dtype=float)``; ``pd.to_numeric`` alone has not been reliable
+       here. Both ``pipelines/07`` and ``pipelines/11`` were bitten by this.
+
     ``moderators`` fits a subset, for the leave-one-out ablations behind
     Supplementary Figures S1-S4 (``pipelines/07``). The default full-model path
     is left byte-for-byte as it was, including the order in which result columns
