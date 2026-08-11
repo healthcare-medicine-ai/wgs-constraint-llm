@@ -244,6 +244,35 @@ and a perturbed effect size feeds the weighted least squares where a borderline
 p-value could in principle flip. The comment in `metareg.py` records why the
 line is missing so nobody helpfully adds it back.
 
+## "Dominant moderator" means the coefficient, not the ablation
+
+The Revision 2 response letter tells Reviewer 1: "Across the 33 gene-group pairs
+reaching exome-wide significance under the unified model, the dominant moderator
+is the predicted loss-of-function term for 13, predicted pathogenicity for 7,
+the missense annotation for 5, HMM-derived constraint for 5, and GERP RS for 3."
+
+All six numbers reproduce **exactly**, but only under one reading. "Dominant"
+is the moderator with the smallest **coefficient p-value in the full model** --
+not the one whose removal costs the most signal, which is the natural reading
+given the sentence sits in a paragraph about leave-one-out ablations. The two
+disagree sharply: on the ablation reading pLoF is dominant for 3 pairs, on the
+coefficient reading for 13.
+
+The population matters too. It is the merged Epi25/G4E table at
+`n_variants >= 25`, not the raw p-value table:
+
+| source | pairs | pLoF | path | mis | HMM | GERP |
+|---|---|---|---|---|---|---|
+| raw p-value table, no floor | 61 | 4 | 21 | 5 | 15 | 16 |
+| raw p-value table, n>=25 | 35 | 13 | 8 | 6 | 5 | 3 |
+| **merged Epi25/G4E, n>=25** | **33** | **13** | **7** | **5** | **5** | **3** |
+| **letter** | **33** | **13** | **7** | **5** | **5** | **3** |
+
+Locked in by `gate_07c`, which asserts the six values, so a future change that
+moves them fails rather than passing quietly. This matters for Revision 3: the
+corrections change these counts, and they must be recomputed the same way rather
+than by whichever definition seems natural at the time.
+
 ## The ablations now have a stage (2026-08-11)
 
 `pipelines/07_moderator_ablations.py` fits the full model and six leave-one-out
