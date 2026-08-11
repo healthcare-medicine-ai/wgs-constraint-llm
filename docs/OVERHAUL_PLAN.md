@@ -348,6 +348,35 @@ about what was run. Where a cached output exists, recover the parameters from
 the output rather than reading them off the source — that is what settled this,
 and it took one join.
 
+### Closing it out: the residual difference is confined to discarded models
+
+The schizophrenia gate passes on the criterion that matters, and the leftover
+last-bit difference turns out to be harmless for a reason worth stating in the
+methods rather than buried here.
+
+Measured against the September 2025 cache: identical row set (5,684,992),
+identical columns, 190,328 models against 190,328, `n_variants` 100%
+bit-identical, and **zero changes in significance** (824 gene-groups at
+p < 3.4e-7 before and after). `effect_size` differs on ~20% of rows at a maximum
+relative difference of 1.98e-15.
+
+109 gene-groups move by more than one order of magnitude in p as a result. All
+109 have fewer than 21 variants, median 8, and **none passes the
+`n_variants >= 25` floor**, so none is ever reported. With five moderators plus
+an intercept, a gene with 8 variants is fitted with two residual degrees of
+freedom; such a fit is near-saturated and its p-value is not meaningful to the
+precision it is printed at, regardless of input noise. The inclusion floor
+removes precisely these models.
+
+So the floor is not an arbitrary threshold -- it is what makes the reported
+p-values numerically stable, and that is an argument worth making in the
+manuscript rather than leaving implicit.
+
+What remains genuinely unexplained is why `effect_size` differs at all. Ruled
+out by measurement: frame construction (six variants, byte-identical results)
+and the `np.log` SIMD path (vectorised, scalar and libm all agree). Recorded as
+unresolved rather than explained away.
+
 ### Schizophrenia: superseded diagnostic notes, 2026-08-11
 
 

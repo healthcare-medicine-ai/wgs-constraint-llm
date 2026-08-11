@@ -34,8 +34,19 @@
 # reported, as information, so a future run that achieves it is visible rather
 # than silently accepted.
 #
+# One number in the 11b output deserves reading rather than skipping: 109
+# gene-groups move by more than an order of magnitude in p. Every one of them
+# has fewer than 21 variants (median 8), and none passes the n_variants >= 25
+# inclusion floor, so none is ever reported
+# (genentech_fix/diag_scz_unstable_models.py). That is structural, not luck:
+# five moderators plus an intercept is six parameters, so a gene with 8 variants
+# is fitted with 2 residual degrees of freedom and the fit is near-saturated. A
+# p-value from such a model is not meaningful at the precision it is printed at,
+# whatever the input. The inclusion floor removes exactly these.
+#
 # Do not weaken this further. If a future change makes significance calls
-# disagree, that is a real regression, not more floating-point noise.
+# disagree, or if a model above the floor starts moving, that is a real
+# regression, not more floating-point noise.
 set -uo pipefail
 cd /oak/stanford/groups/mrivas/projects/wgs-constraint-llm/osthoag/wgs-constraint-llm
 PY=/oak/stanford/groups/mrivas/users/osthoag/anaconda3/bin/python
