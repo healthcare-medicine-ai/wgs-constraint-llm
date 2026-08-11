@@ -244,7 +244,28 @@ and a perturbed effect size feeds the weighted least squares where a borderline
 p-value could in principle flip. The comment in `metareg.py` records why the
 line is missing so nobody helpfully adds it back.
 
-## Results with no stage that regenerates them
+## The ablations now have a stage (2026-08-11)
+
+`pipelines/07_moderator_ablations.py` fits the full model and six leave-one-out
+ablations and renders Supplementary Figures S1-S4. `fit_per_gene` gained a
+`moderators=` argument; the full-model path is untouched, including the order
+its result columns are built in, because `gate_01` asserts bit-identity and
+column order reaches the written TSV.
+
+Gated by `jobs/gate_07_ablations.sbatch` against the six committed Revision 2
+tables. The published *panels* cannot be pixel-compared -- they survive only as
+1299x1092 images inside `Supplemental Data.pdf`, rescaled by Word -- so the
+tables are the gate and the figures are rendered from gated numbers. The stage
+prints the annotated gene set per panel so it can be read against the published
+ones; S1's DEE panel should name SCN1A, CD8B, SLC22A1, CCT7, TTN, MRPS22 and
+SLC25A11.
+
+The skip condition still tests all five moderators when fitting a subset. That
+is deliberate: each published ablation table holds the same 72,386 gene-groups
+as the full model, so they were produced that way, and testing only the subset
+would silently admit genes the full model dropped.
+
+## Superseded: results with no stage that regenerates them
 
 `results/epilepsy_unified_model_pvalues_MINUS_*.tsv`,
 `meta_FULL_all_moderators.tsv` and

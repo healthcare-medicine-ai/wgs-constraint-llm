@@ -64,8 +64,8 @@ need the Revision 2 baseline snapshot, which stays on the cluster.
 
 ### Every stage
 
-`pipelines/` is numbered by dependency order, not contiguously -- 03, 04 and 07
-were folded into other stages or into `genentech_fix/` and the numbers were left
+`pipelines/` is numbered by dependency order, not contiguously -- 03 and 04 live
+in `genentech_fix/` as correction-specific diagnostics, and the numbers were left
 alone so existing references keep resolving.
 
 | Stage | Produces |
@@ -75,6 +75,7 @@ alone so existing references keep resolving.
 | `02_run_metaregression.py` | per-gene WLS p-values |
 | `05_build_constraint_gerp_predictions.py` | constraint + GERP prediction table |
 | `06_epilepsy_tables_and_figures.py` | Tables 1 and 2, Figure 5 |
+| `07_moderator_ablations.py` | leave-one-out ablations, Supplementary Figures S1-S4 |
 | `08_hmm_gerp_joint_distribution.py` | Figures 4a, 4b |
 | `09_gene_constraint_figures.py` | Figures 3a, 3b |
 | `10_rgc_aou_joint.py` | Figures 2a, 2b |

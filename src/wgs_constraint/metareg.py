@@ -103,15 +103,34 @@ def prepare_regression_input(df: pd.DataFrame, *, clip_epsilon: float = 0.01
     return out[out["var_effect_size"] != 0]
 
 
-def fit_per_gene(input_df: pd.DataFrame, *, progress: bool = True
-                 ) -> pd.DataFrame:
+def fit_per_gene(input_df: pd.DataFrame, *, moderators: list[str] | None = None,
+                 progress: bool = True) -> pd.DataFrame:
     """Weighted least squares per (gene_id, gene_name, group).
 
     Genes with any missing moderator are skipped, matching the notebooks. The
     reported ``p_unified`` is ``model.f_pvalue`` -- the F-test for the whole
     regression, not a coefficient p-value. External groups have repeatedly
     misread this as a coefficient test.
+
+    ``moderators`` fits a subset, for the leave-one-out ablations behind
+    Supplementary Figures S1-S4 (``pipelines/07``). The default full-model path
+    is left byte-for-byte as it was, including the order in which result columns
+    are built, because ``jobs/gate_01_definitive.sbatch`` asserts bit-identity
+    against the submitted p-values and column order reaches the written TSV.
+    Ablations emit only the five columns the published MINUS_* tables carry.
+
+    The skip condition deliberately still tests **all five** moderators even
+    when fitting a subset: the published ablation tables each hold the same
+    72,386 gene-groups as the full model, so they were produced that way, and
+    testing only the subset would silently admit genes the full model dropped.
     """
+    subset = moderators is not None
+    mods = list(MODERATORS) if moderators is None else list(moderators)
+    unknown = set(mods) - set(MODERATORS)
+    if unknown:
+        raise ValueError(f"unknown moderator(s): {sorted(unknown)}")
+    if not mods:
+        raise ValueError("at least one moderator is required")
     grouped = input_df.groupby(GROUP_KEY)
     iterator = grouped
     if progress:
@@ -128,10 +147,17 @@ def fit_per_gene(input_df: pd.DataFrame, *, progress: bool = True
         if data[required].isnull().any().any():
             continue
         try:
-            model = WLS(data["effect_size"], add_constant(data[MODERATORS]),
+            model = WLS(data["effect_size"], add_constant(data[mods]),
                         weights=1 / data["var_effect_size"],
                         missing="drop").fit()
         except Exception:
+            continue
+        if subset:
+            results.append({
+                "gene_id": gene_id, "gene_name": gene_name, "group": group,
+                "n_variants": len(data),
+                "p_unified": model.f_pvalue,
+            })
             continue
         results.append({
             "gene_id": gene_id, "gene_name": gene_name, "group": group,
