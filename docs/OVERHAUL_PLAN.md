@@ -210,3 +210,36 @@ checksummed in `docs/INPUT_MANIFEST.md` and must not be re-derived:
 `SCZ Liftover.ipynb` (SCHEMA and scz.tsv.gz lifted to hg38).
 `Constraint + AM Analysis.ipynb` is exploratory and produces nothing the
 manuscript cites.
+
+### Figure gates: all seven published figures reproduce pixel-exactly
+
+Rendered from the pre-correction inputs and compared pixel-by-pixel against the
+PNGs kept by the `AJHG-R2-submitted` tag.
+
+| Figure | Stage | Result |
+|---|---|---|
+| 1, SCN1A | `pipelines/12` | identical, 0 pixels differ |
+| 2a, 2b, RGC vs AoU | `pipelines/10` | identical, 0 pixels differ |
+| 3a, HMM vs missense z | `pipelines/09` | identical, 0 pixels differ |
+| 3b, HMM vs MTR | `pipelines/09` | identical except 314 pixels |
+| 4a, 4b, HMM vs GERP | `pipelines/08` | identical, 0 pixels differ |
+
+Figure 3b's 314 differing pixels occupy a 21x32 box at 81% across and 20% down,
+which is the position of the R-squared annotation. The plotted data is
+bit-identical; the only difference is the digit, corrected from the hardcoded
+0.152 to the computed 0.1531. This is the intended correction, not a
+discrepancy.
+
+### One more lesson: do not add .copy() to a validated numerical path
+
+`gate01` failed after the meta-regression was moved into `metareg.py`, with the
+row counts matching exactly but the content differing. The cause was a `.copy()`
+added for tidiness in `haldane_effect_sizes`: it changes the array's memory
+layout, which changes the vectorised path numpy selects for `np.log`, which
+perturbs `effect_size` by one unit in the last place.
+
+Numerically that is around 1e-16 and harmless. It was removed anyway. A
+bit-identical gate is a far stronger claim than "agrees to fifteen decimals",
+and a perturbed effect size feeds the weighted least squares where a borderline
+p-value could in principle flip. The comment in `metareg.py` records why the
+line is missing so nobody helpfully adds it back.

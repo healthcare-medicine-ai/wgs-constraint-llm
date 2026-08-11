@@ -26,7 +26,8 @@ from __future__ import annotations
 
 import pandas as pd
 
-__all__ = ["KEY_COLUMNS", "SCORE_COLUMN", "load_collapsed", "collapse"]
+__all__ = ["KEY_COLUMNS", "SCORE_COLUMN", "load_collapsed", "load_uncollapsed",
+           "collapse"]
 
 KEY_COLUMNS = ["chr", "pos", "ref", "alt"]
 SCORE_COLUMN = "am_pathogenicity"
@@ -49,6 +50,41 @@ def collapse(frame: pd.DataFrame, how: str = "max") -> pd.DataFrame:
     return getattr(grouped, how)()
 
 
+def load_uncollapsed(path, *, restrict_to=None,
+                     chunksize: int = _DEFAULT_CHUNK,
+                     verbose: bool = True) -> pd.DataFrame:
+    """Load without de-duplicating, reproducing the pre-correction behaviour.
+
+    Exists so the submitted results can be regenerated exactly. Do not use it
+    for new analysis: the duplicated rows inflate variant counts and their
+    weight in the meta-regression.
+    """
+    frame = _scan(path, restrict_to, chunksize)[0]
+    if verbose:
+        print(f"      AlphaMissense: {len(frame):,} rows, NOT collapsed "
+              f"(reproducing the submitted behaviour)", flush=True)
+    return frame
+
+
+def _scan(path, restrict_to, chunksize):
+    kept = []
+    n_scanned = 0
+    reader = pd.read_csv(
+        path, sep="\t", header=_HEADER_ROW,
+        usecols=list(_RENAME) + [SCORE_COLUMN], chunksize=chunksize)
+    for chunk in reader:
+        n_scanned += len(chunk)
+        chunk = chunk.rename(columns=_RENAME)
+        if restrict_to is not None:
+            index = pd.MultiIndex.from_arrays([chunk[c] for c in KEY_COLUMNS])
+            chunk = chunk[index.isin(restrict_to)]
+        if len(chunk):
+            kept.append(chunk)
+    if not kept:
+        raise ValueError("no AlphaMissense rows matched the requested variants")
+    return pd.concat(kept, ignore_index=True), n_scanned
+
+
 def load_collapsed(
     path,
     *,
@@ -69,28 +105,7 @@ def load_collapsed(
     how
         Collapse strategy, see :func:`collapse`.
     """
-    kept = []
-    n_scanned = 0
-
-    reader = pd.read_csv(
-        path, sep="\t", header=_HEADER_ROW,
-        usecols=list(_RENAME) + [SCORE_COLUMN],
-        chunksize=chunksize,
-    )
-    for chunk in reader:
-        n_scanned += len(chunk)
-        chunk = chunk.rename(columns=_RENAME)
-        if restrict_to is not None:
-            index = pd.MultiIndex.from_arrays(
-                [chunk[c] for c in KEY_COLUMNS])
-            chunk = chunk[index.isin(restrict_to)]
-        if len(chunk):
-            kept.append(chunk)
-
-    if not kept:
-        raise ValueError("no AlphaMissense rows matched the requested variants")
-
-    frame = pd.concat(kept, ignore_index=True)
+    frame, n_scanned = _scan(path, restrict_to, chunksize)
     n_before = len(frame)
     frame = collapse(frame, how=how)
 

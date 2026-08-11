@@ -18,8 +18,9 @@ required.
 
 from __future__ import annotations
 
-import numpy as np
 import pandas as pd
+
+from .metareg import haldane_effect_sizes
 
 __all__ = ["load_gene_annotation", "load_epi25_variants", "add_effect_sizes"]
 
@@ -66,26 +67,15 @@ def load_epi25_variants(
 
 
 def add_effect_sizes(df: pd.DataFrame, *, max_allele_count: int = 5) -> pd.DataFrame:
-    """Apply the rare-variant cut and attach effect sizes and indicators.
+    """Apply the rare-variant cut, attach effect sizes, and set indicators.
 
-    Adds ``effect_size`` (Haldane--Anscombe corrected log odds ratio),
-    ``var_effect_size`` (Woolf variance), ``pLoF_ind`` and ``missense_ind``.
+    The effect-size computation is shared with the schizophrenia analysis and
+    lives in :mod:`wgs_constraint.metareg`; only the consequence vocabulary is
+    cohort-specific. Epi25 uses a small controlled set, so the mapping is a
+    direct comparison here rather than the list membership SCHEMA needs.
     """
-    df = df[(df["ac_ctrl"] + df["ac_case"] <= max_allele_count)
-            & (df["an_case"] > 0) & (df["an_ctrl"] > 0)].copy()
-
-    alt_case = df["ac_case"]
-    alt_ctrl = df["ac_ctrl"]
-    ref_case = df["an_case"] - df["ac_case"]
-    ref_ctrl = df["an_ctrl"] - df["ac_ctrl"]
-
-    df["effect_size"] = np.log(
-        ((0.5 + alt_case) * (0.5 + ref_ctrl))
-        / ((0.5 + ref_case) * (0.5 + alt_ctrl)))
-    df["var_effect_size"] = (1 / (0.5 + ref_case) + 1 / (0.5 + ref_ctrl)
-                             + 1 / (0.5 + alt_case) + 1 / (0.5 + alt_ctrl))
-
-    df["pLoF_ind"] = (df["consequence"] == "pLoF").astype("int32")
-    df["missense_ind"] = df["consequence"].isin(
+    out = haldane_effect_sizes(df, max_allele_count=max_allele_count)
+    out["pLoF_ind"] = (out["consequence"] == "pLoF").astype("int32")
+    out["missense_ind"] = out["consequence"].isin(
         ["damaging_missense", "other_missense"]).astype("int32")
-    return df
+    return out

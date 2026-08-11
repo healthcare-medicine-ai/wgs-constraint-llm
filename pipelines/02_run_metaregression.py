@@ -24,16 +24,11 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from statsmodels.regression.linear_model import WLS
-from statsmodels.tools.tools import add_constant
-from tqdm import tqdm
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
-from wgs_constraint import get_config  # noqa: E402
-
-MODERATORS = ["log_constraint", "GERP_RS", "log_pathogenicity",
-              "pLoF_ind", "missense_ind"]
-GROUP_KEY = ["gene_id", "gene_name", "group"]
+from wgs_constraint import (  # noqa: E402
+    GROUP_KEY, MODERATORS, fit_per_gene, get_config, prepare_regression_input,
+)
 
 DISPLAY_NAMES = {
     "gene_id": "Gene ID", "gene_name": "Gene Name", "group": "Group",
@@ -50,52 +45,15 @@ def log(msg):
 
 def prepare(path, cfg):
     log(f"[1/5] loading {Path(path).name} ...")
-    df = pd.read_csv(path, sep="\t")
-    eps = cfg.param("clip_epsilon")
-
-    df["prob_0"] = np.clip(df["prob_0"], eps, 1 - eps)
-    df["am_pathogenicity"] = np.clip(df["am_pathogenicity"], eps, 1 - eps)
-
-    cols = ["prob_0", "GERP_RS", "am_pathogenicity"]
-    df[cols] = df[cols].fillna(df[cols].mean())
-    df["pLoF_ind"] = df["pLoF_ind"].fillna(0)
-    df["missense_ind"] = df["missense_ind"].fillna(0)
-
-    # GERP enters untransformed; only the two probabilities are transformed.
-    df[["log_constraint", "log_pathogenicity"]] = -np.log1p(
-        -(df[["prob_0", "am_pathogenicity"]]))
-
-    df = df.dropna(subset=["effect_size", "var_effect_size"])
-    df = df[df["var_effect_size"] != 0]
+    df = prepare_regression_input(
+        pd.read_csv(path, sep="\t"), clip_epsilon=cfg.param("clip_epsilon"))
     log(f"      regression rows: {len(df):,}")
     return df
 
 
 def fit(input_df):
     log("[2/5] fitting per-gene WLS models ...")
-    results = []
-    for key, data in tqdm(input_df.groupby(GROUP_KEY), desc="genes", unit="gene"):
-        gene_id, gene_name, group = key
-        if data[MODERATORS + ["effect_size",
-                              "var_effect_size"]].isnull().any().any():
-            continue
-        try:
-            model = WLS(data["effect_size"], add_constant(data[MODERATORS]),
-                        weights=1 / data["var_effect_size"],
-                        missing="drop").fit()
-        except Exception:
-            continue
-        results.append({
-            "gene_id": gene_id, "gene_name": gene_name, "group": group,
-            "n_variants": len(data),
-            "p_constraint": model.pvalues["log_constraint"],
-            "p_gerp": model.pvalues["GERP_RS"],
-            "p_pathogenicity": model.pvalues["log_pathogenicity"],
-            "p_pLoF": model.pvalues["pLoF_ind"],
-            "p_missense": model.pvalues["missense_ind"],
-            "p_unified": model.f_pvalue,
-        })
-    out = pd.DataFrame(results)
+    out = fit_per_gene(input_df)
     log(f"      models fitted: {len(out):,}")
     return out
 

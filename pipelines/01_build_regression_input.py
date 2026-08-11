@@ -31,7 +31,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from wgs_constraint import (  # noqa: E402
     annotate_with_gerp, get_config, load_collapsed,
 )
-from wgs_constraint.alphamissense import KEY_COLUMNS, SCORE_COLUMN  # noqa: E402
+from wgs_constraint.alphamissense import (  # noqa: E402
+    KEY_COLUMNS, load_uncollapsed,
+)
 from wgs_constraint.epi25 import (  # noqa: E402
     add_effect_sizes, load_epi25_variants, load_gene_annotation,
 )
@@ -115,7 +117,8 @@ def main():
             cfg.data("alphamissense"), restrict_to=wanted,
             how=cfg.param("alphamissense_collapse"))
     else:
-        alphamissense = _load_uncollapsed(cfg.data("alphamissense"), wanted)
+        alphamissense = load_uncollapsed(cfg.data("alphamissense"),
+                                         restrict_to=wanted)
 
     # -- 4. merge and write -----------------------------------------------
     log("[5/5] merging and writing ...")
@@ -132,25 +135,6 @@ def main():
     out = cfg.result(f"constraint_gerp_am_epi25_variants{args.out_suffix}.tsv.gz")
     merged.to_csv(out, index=False, compression="gzip", sep="\t")
     log(f"      wrote {out} ({os.path.getsize(out) / 1e6:.1f} MB)")
-
-
-def _load_uncollapsed(path, restrict_to):
-    """Submitted behaviour: no de-duplication, so isoforms fan out on merge."""
-    from wgs_constraint.alphamissense import _DEFAULT_CHUNK, _HEADER_ROW, _RENAME
-    kept = []
-    reader = pd.read_csv(path, sep="\t", header=_HEADER_ROW,
-                         usecols=list(_RENAME) + [SCORE_COLUMN],
-                         chunksize=_DEFAULT_CHUNK)
-    for chunk in reader:
-        chunk = chunk.rename(columns=_RENAME)
-        index = pd.MultiIndex.from_arrays([chunk[c] for c in KEY_COLUMNS])
-        chunk = chunk[index.isin(restrict_to)]
-        if len(chunk):
-            kept.append(chunk)
-    frame = pd.concat(kept, ignore_index=True)
-    print(f"      AlphaMissense: {len(frame):,} rows, NOT collapsed "
-          f"(reproducing submitted behaviour)", flush=True)
-    return frame
 
 
 if __name__ == "__main__":
