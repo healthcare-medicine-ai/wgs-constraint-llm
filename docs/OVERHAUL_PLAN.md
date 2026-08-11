@@ -114,3 +114,37 @@ Decompressed-content md5, so gzip metadata differences do not confuse comparison
 | Artifact | md5 (decompressed) |
 |---|---|
 | `HMM_rgc_ALL_RS_merged_predictions.tsv.gz` (as published, repo root) | `c56b4f5d376cfc5d29975a9828db6848` |
+
+## Figure provenance, resolved 2026-08-11
+
+The notebooks save several competing versions of the same figure number and the
+last cell executed wins, which nothing records. Determined by comparing what the
+`AJHG-R2-submitted` tag kept against what it deleted.
+
+**Authoritative, kept in the R2 commit:**
+
+| Figure | Produced by | Detail |
+|---|---|---|
+| 2a, 2b | `Constraint Measures Comparison` cell 18 **or** `RGC + AoU Predictions` cell 9 | both write the same filenames; unresolved |
+| 3a | `Constraint Measures Comparison` cell 32 | fraction of bases with P(0) > **0.5** vs gnomAD missense z-score |
+| 3b | `Constraint Measures Comparison` cell 28 | proportion with P(0) > **0.6** vs MTR |
+| 4a, 4b | `Constraint Measures Comparison` cells 16-17 | gated, pixel-identical, now `pipelines/08` |
+
+**Deleted by the R2 commit, i.e. superseded:** "Figure 3a: HMM vs gnomAD v4
+constraint per gene" (cell 26), "Figure 3a: HMM vs gnomAD LoF z-score per gene",
+"Figure 3b: HMM vs gnomAD LoF z-score per gene" (cell 34), "Figure 3c: HMM vs
+MTR per gene" (cell 36), and a copy with a newline in its filename.
+
+**Two defects in the surviving Figure 3 pair:**
+
+1. *Mismatched thresholds.* Panel A uses P(0) > 0.5 and panel B uses P(0) > 0.6.
+   Already noted in the Revision 3 plan; `MATCH_THRESHOLDS` was proposed to put
+   both on 0.5. Not a correctness bug, but the caption should say which is which.
+2. *Hardcoded R².* Cell 28 annotates panel B with the literal string
+   `$R^2=0.152$` rather than the computed value, while cell 32 computes it. If
+   the input changes the annotation does not. The extracted stage must compute
+   both, and the recomputed value for panel B should be checked against 0.152.
+
+`calculate_overlap` is byte-identical in cells 20 and 30; cell 30 merely
+recomputes `proportion_over_50` redundantly. An earlier draft of this file
+speculated the two panels used different overlap logic -- they do not.
