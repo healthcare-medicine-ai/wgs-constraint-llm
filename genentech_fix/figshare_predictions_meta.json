@@ -1,0 +1,20 @@
+{
+  "title": "HMM constraint predictions with GERP RS annotation (GRCh38, RGC-ME exomes)",
+  "description": "<p>Per-position HMM constraint predictions for the RGC-ME exome dataset, annotated with GERP RS conservation scores on GRCh38. This is the intermediate table used as input to the unified meta-regression model of AJHG-D-24-00613, \"A unified meta-regression model identifies genes associated with epilepsy\".</p>\n\n<p><b>Why this is deposited.</b> The GERP annotation step requires an hg38 GERP RS track, which UCSC does not publish; it must be lifted from the hg19 track. Groups whose licensing prevents them running UCSC liftOver, or who simply want to avoid an independently derived liftover differing in coverage, can start from this table instead and skip the step entirely.</p>\n\n<p><b>Contents.</b> Tab-separated, gzipped, 28,922,270 rows across the 22 autosomes, one row per coding position:</p>\n<ul>\n<li><code>chr</code>, <code>pos</code> &mdash; GRCh38 coordinates, <b>1-based</b></li>\n<li><code>prob_0</code>, <code>prob_1</code> &mdash; HMM posterior probability of the constrained and unconstrained state</li>\n<li><code>observation</code> &mdash; whether a variant was observed at this position in RGC-ME (0 or 1)</li>\n<li><code>GERP_RS</code> &mdash; GERP rejected-substitutions score, present at every row, range &minus;12.30 to 6.17</li>\n</ul>\n\n<p><b>Coordinate convention.</b> Positions are 1-based. This matters: <code>pyBigWig.values()</code> returns a 0-based vector, and indexing it with 1-based positions shifts every score one base downstream. An earlier version of our analysis contained exactly that error; the scores here are the corrected ones. Corrected and shifted values correlate at only r = 0.17, because adjacent coding bases differ sharply in conservation, so the shift randomises rather than blurs.</p>\n\n<p><b>Provenance.</b> Built from the RGC-ME HMM constraint predictions (doi:10.6084/m9.figshare.27184245) annotated with the lifted hg38 GERP RS track (doi:10.6084/m9.figshare.33201549). The liftover was verified positionally: of 1,500 sampled positions where GERP varies sharply between neighbouring bases, 1,498 carry the source value at the chain-mapped coordinate at zero offset, and none at an offset of &plusmn;1 or &plusmn;2.</p>\n\n<p><b>No controlled-access content.</b> This table contains no case/control data from any cohort. It is derived solely from the two public inputs above.</p>\n\n<p><b>File properties.</b> gzipped TSV, 577,699,523 bytes, md5 <code>b6cc9daefe3344d2db84350da2683114</code>.</p>\n\n<p><b>Reproducing the analysis input from this file.</b> Merging this table with cohort variant summary statistics, AlphaMissense pathogenicity and GENCODE v44 annotations reproduces the prepared variant-level regression input. The pipeline that does so is <code>pipelines/01_build_regression_input.py</code> at https://github.com/healthcare-medicine-ai/wgs-constraint-llm, which also documents the analysis choices external groups have most often got wrong &mdash; notably that the rare-variant cut is on allele count (<code>ac_case + ac_ctrl &le; 5</code>) rather than allele frequency, and that effect sizes are Haldane-Anscombe corrected log odds ratios computed from allele counts rather than Firth BETA/SE.</p>",
+  "keywords": [
+    "genomic constraint",
+    "GERP",
+    "hidden Markov model",
+    "GRCh38",
+    "RGC-ME",
+    "exome",
+    "rare variant association",
+    "epilepsy",
+    "meta-regression"
+  ],
+  "references": [
+    "https://doi.org/10.6084/m9.figshare.27184245",
+    "https://doi.org/10.6084/m9.figshare.33201549",
+    "https://github.com/healthcare-medicine-ai/wgs-constraint-llm"
+  ]
+}

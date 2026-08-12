@@ -19,6 +19,9 @@ from urllib.request import Request, urlopen
 BASE = "https://api.figshare.com/v2"
 TOKEN_FILE = Path.home() / ".figshare_token"
 
+# Defaults describe the GERP bigWig, the first item deposited. Pass
+# --metadata <file.json> with title/description/keywords/references to deposit
+# something else rather than editing these constants per upload.
 TITLE = "GERP RS conservation scores for GRCh38 (lifted from hg19)"
 
 DESCRIPTION = """\
@@ -84,16 +87,31 @@ def main():
     ap.add_argument("--update-id", default=None,
                     help="populate an existing draft instead of creating a new "
                          "one, so a draft started in the UI is not duplicated")
+    ap.add_argument("--metadata", type=Path, default=None,
+                    help="JSON file with title/description/keywords/references; "
+                         "defaults to the GERP bigWig metadata above")
     ap.add_argument("--dry-run", action="store_true")
     args = ap.parse_args()
     kind = "items" if args.items else "articles"
     token = read_token()
 
+    title, description = TITLE, DESCRIPTION
+    keywords, references = KEYWORDS, REFERENCES
+    if args.metadata:
+        meta = json.loads(args.metadata.read_text())
+        missing = {"title", "description"} - set(meta)
+        if missing:
+            sys.exit(f"{args.metadata}: missing {sorted(missing)}")
+        title = meta["title"]
+        description = meta["description"]
+        keywords = meta.get("keywords", [])
+        references = meta.get("references", [])
+
     payload = {
-        "title": TITLE,
-        "description": DESCRIPTION,
-        "keywords": KEYWORDS,
-        "references": REFERENCES,
+        "title": title,
+        "description": description,
+        "keywords": keywords,
+        "references": references,
         "defined_type": "dataset",
     }
 
@@ -101,8 +119,8 @@ def main():
     print(f"Would {verb.lower()}:" if args.dry_run else f"{verb} draft item:")
     print(f"  endpoint : /account/{kind}"
           f"{'/' + args.update_id if args.update_id else ''}")
-    print(f"  title    : {TITLE}")
-    print(f"  keywords : {', '.join(KEYWORDS)}")
+    print(f"  title    : {title}")
+    print(f"  keywords : {', '.join(keywords)}")
     if args.dry_run:
         return
 

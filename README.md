@@ -144,6 +144,7 @@ Inputs are not redistributed here. Every one is checksummed in
 | UCSC chain, hg19 to hg38 | `hg19ToHg38.over.chain.gz` | https://hgdownload.soe.ucsc.edu/goldenPath/hg19/liftOver/hg19ToHg38.over.chain.gz |
 | **GERP RS, hg38 (lifted here)** | `All_hg38_RS.bw` | https://doi.org/10.6084/m9.figshare.33201549.v1 |
 | WES constraint predictions, AoU and RGC-ME | — | https://doi.org/10.6084/m9.figshare.27184245.v1 |
+| **HMM constraint + GERP, per position** | `HMM_rgc_ALL_RS_merged_predictions.tsv.gz` | figshare item 33213630 *(DOI pending publication)* |
 
 **Which GENCODE file matters.** Release 44 ships several GTFs and they give
 different CDS interval sets. This analysis uses the *basic* annotation,
@@ -151,6 +152,11 @@ different CDS interval sets. This analysis uses the *basic* annotation,
 match against the URL above. The `primary_assembly` file at the same release is
 49,730,393 bytes and is **not** what was used, and some notebook comments cite a
 `chr_patch_hapl_scaff` URL, which is a third, different file.
+
+**Skipping the bigWig entirely.** `pipelines/01 --constraint-gerp <file>` reads
+the pre-annotated constraint + GERP table above instead of annotating from the
+16.4 GB track, which also removes any need for UCSC liftOver. Verified to
+produce a byte-identical regression input to the bigWig route.
 
 **The hg38 GERP track was produced here, not downloaded.** UCSC publishes the
 hg19 track only. `All_hg38_RS.bw` (16.4 GB, md5

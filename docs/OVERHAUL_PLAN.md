@@ -244,6 +244,50 @@ and a perturbed effect size feeds the weighted least squares where a borderline
 p-value could in principle flip. The comment in `metareg.py` records why the
 line is missing so nobody helpfully adds it back.
 
+## The last-bit mystery was a stale reference, not a mechanism
+
+Four separate investigations chased a difference of ~1e-15 in `effect_size`,
+appearing as roughly 80% bit-identity against a reference. Four mechanistic
+hypotheses were raised and killed by measurement:
+
+| hypothesis | test | verdict |
+|---|---|---|
+| frame construction / memory layout | six variants of the filter | all byte-identical |
+| `np.log` SIMD dispatch | vectorised vs scalar vs libm | all agree |
+| array alignment | eight offsets, plus unaligned views | all bit-identical |
+| pandas numexpr threading | 1/2/4/8 threads vs plain numpy | all bit-identical |
+
+The cause was none of them. `results/constraint_gerp_am_epi25_variants_FIXED.tsv.gz`
+was written 2026-08-10 02:35. Commit `a15fc7a` reverted `epi25.py` from
+`.isin()` to the notebook's chained `!=` at 23:22 the same day. The artifact
+therefore carried exactly the ULP difference that revert removed, and every
+comparison against it inherited it.
+
+What finally revealed it was not another hypothesis but a number: the figure
+**81.8198%** appeared in two independent comparisons. Two different routes
+cannot agree to four decimal places by coincidence, so the odd one out had to be
+the shared reference. A three-way comparison confirmed it -- the two fresh runs
+are bit-identical to each other.
+
+**The pipeline is deterministic.** Two independent runs of stage 01 on the same
+node agree byte for byte, and the published-table route agrees with the bigWig
+route at 100%.
+
+**The lesson.** Before theorising about the thing being compared, check that the
+thing you are comparing against is current. Every one of those four hypotheses
+was about the computation; none was about the reference.
+
+**Why nothing caught it.** `gate_01_refactor` gates the `--no-fix` reproduce
+path only. The corrected path -- which produces every number destined for
+Revision 3 -- had no gate, so its artifact could drift from the code while every
+other gate stayed green. `jobs/gate_01_fixed_path.sbatch` closes that.
+
+**Impact: none on any conclusion.** Refitting from the current-code input gives
+37 significant gene-groups against 37, and 21 against 21 at n>=25, with zero
+disagreements; median |delta log10 p| 3.5e-16. The 18-gene list, Table 1 and
+Table 2 are unchanged, Table 1 and Table 2 byte-identical. The stale input is
+retained as `_STALE_20260810` so earlier numbers stay checkable.
+
 ## "Dominant moderator" means the coefficient, not the ablation
 
 The Revision 2 response letter tells Reviewer 1: "Across the 33 gene-group pairs

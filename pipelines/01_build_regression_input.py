@@ -59,6 +59,12 @@ def main():
     ap.add_argument("--am-fix", choices=["on", "off"], default=None)
     ap.add_argument("--chroms", default=None,
                     help="comma-separated chromosome subset, for smoke tests")
+    ap.add_argument("--constraint-gerp", type=Path, default=None,
+                    help="read an already-annotated constraint+GERP table "
+                         "(chr,pos,prob_0,GERP_RS) instead of annotating from "
+                         "the bigWig. See the Data section of README.md for "
+                         "where this is published. Implies the GERP fix: the "
+                         "published table carries corrected 1-based scores.")
     args = ap.parse_args()
 
     base = not args.no_fix
@@ -87,25 +93,47 @@ def main():
     variants = variants[VARIANT_COLUMNS]
 
     # -- 2. GERP ---------------------------------------------------------
-    log("[3/5] GERP annotation of HMM predictions ...")
-    predictions = pd.read_csv(cfg.derived("hmm_predictions"), sep="\t",
-                              dtype={"chr": "string"})
-    if "position" in predictions.columns and "pos" not in predictions.columns:
-        predictions = predictions.rename(columns={"position": "pos"})
-    predictions["pos"] = predictions["pos"].astype("int64")
-    predictions["chr"] = predictions["chr"].astype("string")
+    if args.constraint_gerp:
+        # Annotating from the bigWig needs the 16.4 GB track, and rebuilding
+        # that track needs UCSC liftOver. Both are avoidable: the annotated
+        # table is a published artifact carrying exactly the columns this step
+        # would have produced. Genentech asked for this route in August 2026,
+        # their licensing barring UCSC tooling.
+        log(f"[3/5] loading annotated constraint+GERP: "
+            f"{args.constraint_gerp.name} ...")
+        if not fix_gerp:
+            sys.exit("--constraint-gerp supplies corrected 1-based scores, so "
+                     "it cannot reproduce the pre-correction behaviour. Drop "
+                     "--no-fix / --gerp-fix off, or annotate from the bigWig.")
+        constraint = pd.read_csv(args.constraint_gerp, sep="\t",
+                                 usecols=["chr", "pos", "prob_0", "GERP_RS"],
+                                 dtype={"chr": "string"})
+        constraint["pos"] = constraint["pos"].astype("int64")
+        if args.chroms:
+            constraint = constraint[
+                constraint["chr"].isin(args.chroms.split(","))]
+        log(f"      positions with GERP: {len(constraint):,}")
+    else:
+        log("[3/5] GERP annotation of HMM predictions ...")
+        predictions = pd.read_csv(cfg.derived("hmm_predictions"), sep="\t",
+                                  dtype={"chr": "string"})
+        if "position" in predictions.columns and "pos" not in predictions.columns:
+            predictions = predictions.rename(columns={"position": "pos"})
+        predictions["pos"] = predictions["pos"].astype("int64")
+        predictions["chr"] = predictions["chr"].astype("string")
 
-    constraint = annotate_with_gerp(
-        predictions,
-        cfg.data("gerp_bigwig"),
-        # This argument IS the defect. position_base=0 reproduces the submitted
-        # behaviour by reading 1-based positions as though they were 0-based.
-        position_base=1 if fix_gerp else 0,
-        only_chromosomes=args.chroms.split(",") if args.chroms else None,
-    )
-    log(f"      positions with GERP: {len(constraint):,} "
-        f"(out-of-bounds dropped: "
-        f"{constraint.attrs.get('gerp_out_of_bounds_dropped', 0):,})")
+        constraint = annotate_with_gerp(
+            predictions,
+            cfg.data("gerp_bigwig"),
+            # This argument IS the defect. position_base=0 reproduces the
+            # submitted behaviour by reading 1-based positions as though they
+            # were 0-based.
+            position_base=1 if fix_gerp else 0,
+            only_chromosomes=args.chroms.split(",") if args.chroms else None,
+        )
+        log(f"      positions with GERP: {len(constraint):,} "
+            f"(out-of-bounds dropped: "
+            f"{constraint.attrs.get('gerp_out_of_bounds_dropped', 0):,})")
 
     # -- 3. AlphaMissense -------------------------------------------------
     log("[4/5] AlphaMissense ...")
