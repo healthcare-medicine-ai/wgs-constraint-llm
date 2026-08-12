@@ -244,49 +244,71 @@ and a perturbed effect size feeds the weighted least squares where a borderline
 p-value could in principle flip. The comment in `metareg.py` records why the
 line is missing so nobody helpfully adds it back.
 
-## The last-bit mystery was a stale reference, not a mechanism
+## Correction: the last-bit difference is the CPU, not a stale artifact
 
-Four separate investigations chased a difference of ~1e-15 in `effect_size`,
-appearing as roughly 80% bit-identity against a reference. Four mechanistic
-hypotheses were raised and killed by measurement:
+An earlier version of this section said the ~1e-15 difference in `effect_size`
+came from a stale reference, and that the pipeline was deterministic. **That was
+wrong**, and it was published to the repository before being checked properly.
+The real cause:
 
-| hypothesis | test | verdict |
-|---|---|---|
-| frame construction / memory layout | six variants of the filter | all byte-identical |
-| `np.log` SIMD dispatch | vectorised vs scalar vs libm | all agree |
-| array alignment | eight offsets, plus unaligned views | all bit-identical |
-| pandas numexpr threading | 1/2/4/8 threads vs plain numpy | all bit-identical |
+**`np.log` gives different last bits on AMD and Intel nodes.** Sherlock's
+`mrivas` partition is heterogeneous. numpy dispatches an AVX-512 kernel on
+Intel Skylake-X and an AVX2 kernel on AMD Rome, and the two disagree in the
+final ulp. Slurm hands out whichever node is free, so the same code on the same
+inputs produces a different file depending on where it lands.
 
-The cause was none of them. `results/constraint_gerp_am_epi25_variants_FIXED.tsv.gz`
-was written 2026-08-10 02:35. Commit `a15fc7a` reverted `epi25.py` from
-`.isin()` to the notebook's chained `!=` at 23:22 the same day. The artifact
-therefore carried exactly the ULP difference that revert removed, and every
-comparison against it inherited it.
+| run | node | CPU | decompressed md5 |
+|---|---|---|---|
+| original `_FIXED`, 02:35 | — | — | `681f3a4c` |
+| `_FIXEDCHK`, rebuilt 17:09 | sh02-09n53 | Intel Xeon 5118 | `681f3a4c` |
+| `_SELFCHK`, 16:21 | sh03-12n24 | AMD EPYC 7742 | `308b4b4f` |
+| `_VIAFIG`, 15:58 | sh03-12n24 | AMD EPYC 7742 | `6370a6bd` |
 
-What finally revealed it was not another hypothesis but a number: the figure
-**81.8198%** appeared in two independent comparisons. Two different routes
-cannot agree to four decimal places by coincidence, so the odd one out had to be
-the shared reference. A three-way comparison confirmed it -- the two fresh runs
-are bit-identical to each other.
+Runs group by processor, not by time. `effect_size` differs on ~18% of rows at
+up to 3.3e-15; every other column is identical, and `var_effect_size` is
+unaffected because it involves no transcendental.
 
-**The pipeline is deterministic.** Two independent runs of stage 01 on the same
-node agree byte for byte, and the published-table route agrees with the bigWig
-route at 100%.
+### Why four hypotheses were killed and the right one survived
 
-**The lesson.** Before theorising about the thing being compared, check that the
-thing you are comparing against is current. Every one of those four hypotheses
-was about the computation; none was about the reference.
+Frame construction, `np.log` alignment, and numexpr threading were each tested
+and cleared. Those tests were sound but **all ran inside a single Slurm job**,
+so every one compared code paths on one processor. None could have detected a
+cross-node difference. A test that cannot distinguish the hypothesis from its
+negation is not evidence.
 
-**Why nothing caught it.** `gate_01_refactor` gates the `--no-fix` reproduce
-path only. The corrected path -- which produces every number destined for
-Revision 3 -- had no gate, so its artifact could drift from the code while every
-other gate stayed green. `jobs/gate_01_fixed_path.sbatch` closes that.
+The stale-artifact story then fitted the data available at that moment — two
+fresh runs agreeing with each other and disagreeing with the committed file —
+and it was wrong because both fresh runs happened to land on the same AMD node.
+One more rebuild, which landed on Intel, reproduced the "stale" file exactly.
 
-**Impact: none on any conclusion.** Refitting from the current-code input gives
-37 significant gene-groups against 37, and 21 against 21 at n>=25, with zero
-disagreements; median |delta log10 p| 3.5e-16. The 18-gene list, Table 1 and
-Table 2 are unchanged, Table 1 and Table 2 byte-identical. The stale input is
-retained as `_STALE_20260810` so earlier numbers stay checkable.
+### What this changes
+
+**Bit-identity is not a property of the code alone here; it is a property of
+code plus processor.** Any gate demanding it must pin the architecture.
+`gate_01_refactor`, `gate_01_fixed_path` and `gate_11_scz` now carry
+`#SBATCH --constraint=CPU_MNF:INTEL`, matching the processor the reference
+artifacts were built on. Without it those gates pass or fail depending on
+scheduling, which is worse than having no gate: it teaches you to ignore them.
+
+**It probably explains schizophrenia too.** Gate 11's unresolved 80.38%
+bit-identity against the September 2025 cache is the same magnitude and the same
+shape, and that cache was built by a notebook on an unknown node. This is now
+the leading explanation, though not yet confirmed — the honest status is
+"consistent with, not demonstrated".
+
+**No conclusion anywhere depends on it.** The difference is 1e-15. Refitting
+across the two architectures gives 37 significant gene-groups against 37, 21
+against 21 at n >= 25, zero disagreements, and byte-identical Tables 1 and 2.
+
+### The transferable lesson
+
+Two of them, and the second is the one that cost the day.
+
+1. Before theorising about a difference, check the reference is current.
+2. **Before accepting that a hypothesis is dead, check the test could have
+   detected it.** Three sound experiments cleared the true cause because all
+   three were blind to it by construction.
+
 
 ## "Dominant moderator" means the coefficient, not the ablation
 

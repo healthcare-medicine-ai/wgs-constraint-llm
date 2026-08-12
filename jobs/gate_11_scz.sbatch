@@ -3,6 +3,12 @@
 #SBATCH --partition=mrivas
 #SBATCH --time=06:00:00
 #SBATCH --mem=192G
+# Pin the CPU vendor. numpy dispatches a different SIMD kernel for np.log on
+# AVX-512 (Intel Skylake-X) than on AVX2 (AMD Rome), and the two differ in the
+# last bit. effect_size then differs on ~18% of rows at up to 3.3e-15, so a
+# bit-identity gate passes or fails depending purely on which node Slurm picked.
+# The reference artifacts were built on Intel.
+#SBATCH --constraint=CPU_MNF:INTEL
 #SBATCH --output=logs/%x_%j.out
 #SBATCH --error=logs/%x_%j.err
 #
