@@ -62,9 +62,10 @@ def main():
     ap.add_argument("--constraint-gerp", type=Path, default=None,
                     help="read an already-annotated constraint+GERP table "
                          "(chr,pos,prob_0,GERP_RS) instead of annotating from "
-                         "the bigWig. See the Data section of README.md for "
-                         "where this is published. Implies the GERP fix: the "
-                         "published table carries corrected 1-based scores.")
+                         "the bigWig, which also avoids needing UCSC liftOver. "
+                         "Produce it with pipelines/05, or join the figshare "
+                         "HMM predictions to the GERP track yourself. Implies "
+                         "the GERP fix: the table carries 1-based scores.")
     args = ap.parse_args()
 
     base = not args.no_fix

@@ -144,7 +144,6 @@ Inputs are not redistributed here. Every one is checksummed in
 | UCSC chain, hg19 to hg38 | `hg19ToHg38.over.chain.gz` | https://hgdownload.soe.ucsc.edu/goldenPath/hg19/liftOver/hg19ToHg38.over.chain.gz |
 | **GERP RS, hg38 (lifted here)** | `All_hg38_RS.bw` | https://doi.org/10.6084/m9.figshare.33201549.v1 |
 | WES constraint predictions, AoU and RGC-ME | — | https://doi.org/10.6084/m9.figshare.27184245.v1 |
-| **HMM constraint + GERP, per position** | `HMM_rgc_ALL_RS_merged_predictions.tsv.gz` | figshare item 33213630 *(DOI pending publication)* |
 
 **Which GENCODE file matters.** Release 44 ships several GTFs and they give
 different CDS interval sets. This analysis uses the *basic* annotation,
