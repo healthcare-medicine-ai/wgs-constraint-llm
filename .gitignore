@@ -47,3 +47,14 @@ __pycache__/
 
 # Slurm job logs.
 logs/
+
+# Gate scratch. The _REGATE and _REPRO suffixes exist so a gate can rebuild an
+# artifact and compare it against the committed one. Tracking the rebuilds means
+# every validation run dirties the tree, which is how a `git checkout` failed
+# mid-merge on 2026-08-12 and pushed a half-finished main.
+results/*_REGATE.*
+results/*_REPRO.*
+results/*_FIXEDCHK.*
+results/*_SELFCHK.*
+results/*_VIAFIG.*
+results/*_ASPUBLISHED.*
