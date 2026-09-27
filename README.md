@@ -81,6 +81,12 @@ alone so existing references keep resolving.
 | `10_rgc_aou_joint.py` | Figures 2a, 2b |
 | `11_schizophrenia.py` | SCHEMA replication, Table A2, Figure A1 |
 | `12_figure1_scn1a.py` | Figure 1 |
+| `13_reviewer1_rgc_vs_hmm.py` | Revision 3: RGC variant status vs HMM constraint as predictors of AoU variant status |
+| `14_reviewer1_swap_model.py` | Revision 3: unified model with RGC variant status in place of HMM constraint |
+| `15_figure3_merged.py` | Revision 3 Figure 3 (A-D); run with `--panel-a-per-transcript` |
+
+Figure numbers above are Revision 2's. In Revision 3, Figures 3 and 4 were merged
+into a four-panel Figure 3 (stage 15), and Figures 5 and 6 became Figures 4 and 5.
 
 Every stage takes `--no-fix` or an equivalent published-fidelity flag, so the
 Revision 2 output can be regenerated for comparison. `jobs/gate_*.sbatch` runs
