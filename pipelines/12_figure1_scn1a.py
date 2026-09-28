@@ -14,9 +14,13 @@ Two things about the original are worth stating rather than burying:
     cell 21. Cell 22, which saves the published figure, runs after the second
     definition, so that is the one implemented here: three panels, with a
     centred moving average of the inverted observation track in the middle.
+    That three-panel version was drawn for the Revision 1 response letter. The
+    manuscript's Figure 1 is cell 6's two-panel version (observations and HMM
+    probability only); `--panels 2` renders it, from the same data and crop.
 
   python pipelines/12_figure1_scn1a.py            # regenerate and gate
   python pipelines/12_figure1_scn1a.py --full-gene   # no crop, for inspection
+  python pipelines/12_figure1_scn1a.py --panels 2 --suffix _MANUSCRIPT   # manuscript Figure 1
 """
 
 from __future__ import annotations
@@ -92,11 +96,33 @@ def plot_subsequence(observations, predictions, start_idx, end_idx, *,
     plt.close(fig)
 
 
+def plot_subsequence_two_panel(observations, predictions, start_idx, end_idx, *, gene_name, out_path):
+    """Notebook cell 6: observations over HMM probability of 0, as in the manuscript."""
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    fig, axes = plt.subplots(nrows=2, ncols=1, figsize=(10, 4), sharex=True)
+    plt.suptitle("Observed Mutations vs HMM Predictions for " + gene_name, y=0.9)
+    axes[0].bar(range(start_idx, end_idx), observations[start_idx:end_idx], width=1.0, color="black")
+    axes[0].set_ylabel("Observation")
+    axes[0].margins(x=0)
+    axes[1].bar(range(start_idx, end_idx), predictions[start_idx:end_idx, 0], width=1.0, color="#8C1515")
+    axes[1].set_xlabel("Position on Chromosome 2")
+    axes[1].set_ylabel("Probability of 0")
+    axes[1].margins(x=0)
+    plt.tight_layout(rect=[0, 0, 1, 0.96])
+    plt.savefig(out_path, dpi=300)
+    plt.close(fig)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--full-gene", action="store_true",
                     help="ignore the hand-tuned crop offsets")
     ap.add_argument("--suffix", default="_REGEN")
+    ap.add_argument("--panels", type=int, choices=(2, 3), default=3,
+                    help="2 = manuscript Figure 1; 3 = with the MA track (response-letter figure)")
     args = ap.parse_args()
     cfg = get_config()
     log(cfg.describe() + "\n")
@@ -127,10 +153,12 @@ def main():
 
     log("[3/3] rendering ...")
     out = cfg.result(f"{FIGURE}{tag}.png")
-    plot_subsequence(
-        predictions_df["observation"],
-        predictions_df[["prob_0", "prob_1"]].to_numpy(),
-        lo, hi, gene_name=GENE, ma_window=MA_WINDOW, out_path=out)
+    obs = predictions_df["observation"]
+    preds = predictions_df[["prob_0", "prob_1"]].to_numpy()
+    if args.panels == 2:
+        plot_subsequence_two_panel(obs, preds, lo, hi, gene_name=GENE, out_path=out)
+    else:
+        plot_subsequence(obs, preds, lo, hi, gene_name=GENE, ma_window=MA_WINDOW, out_path=out)
     log(f"      {out.name}")
 
     print()
