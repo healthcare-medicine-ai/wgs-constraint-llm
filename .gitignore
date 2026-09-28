@@ -58,3 +58,6 @@ results/*_FIXEDCHK.*
 results/*_SELFCHK.*
 results/*_VIAFIG.*
 results/*_ASPUBLISHED.*
+
+# The dashboard ships its gene-level results table (no variant-level data).
+!dashboard/epilepsy_unified_model_results.tsv.gz
