@@ -1,9 +1,7 @@
 """Tests for the AlphaMissense per-variant collapse.
 
-The defect these guard against is subtle: the row count inflation was under 1%,
-but because duplicated rows also duplicate their weight in a WLS fit, eight
-genes changed exome-wide significance. The last test states that mechanism
-directly.
+Duplicated isoform rows duplicate a variant's weight in the WLS fit, not just
+its row count; the last test states that directly.
 """
 
 import pandas as pd
@@ -69,11 +67,8 @@ def test_unsupported_strategy_is_rejected():
 
 
 def test_uncollapsed_merge_inflates_both_count_and_weight():
-    """Why this matters: the WLS weight is what actually moves p-values.
-
-    One variant on three transcripts contributes three identical rows, so its
-    inverse-variance weight is counted three times.
-    """
+    """One variant on three transcripts would contribute three rows, so its
+    inverse-variance weight would be counted three times."""
     variants = pd.DataFrame({
         "chr": ["chr1", "chr1"],
         "pos": [100, 200],
@@ -88,12 +83,12 @@ def test_uncollapsed_merge_inflates_both_count_and_weight():
         ("chr1", 200, "G", "C", 0.30),
     ])
 
-    naive = variants.merge(am, on=KEY_COLUMNS, how="left")
-    fixed = variants.merge(collapse(am), on=KEY_COLUMNS, how="left")
+    uncollapsed = variants.merge(am, on=KEY_COLUMNS, how="left")
+    collapsed = variants.merge(collapse(am), on=KEY_COLUMNS, how="left")
 
-    assert len(naive) == 4 and len(fixed) == 2
+    assert len(uncollapsed) == 4 and len(collapsed) == 2
 
     def weight(d):
         return (1 / d["var_effect_size"]).sum()
     # The first variant's weight is tripled relative to the second.
-    assert weight(naive) == pytest.approx(2 * weight(fixed))
+    assert weight(uncollapsed) == pytest.approx(2 * weight(collapsed))

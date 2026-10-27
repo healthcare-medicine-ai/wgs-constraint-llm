@@ -1,28 +1,29 @@
-# Paths for the wgs-constraint-llm pipelines.
-#
-# Nothing in src/ or pipelines/ hardcodes a filesystem path; everything resolves
-# through here. Override the location of this file with WGS_CONFIG, or override
-# the two roots directly with WGS_DATA_DIR / WGS_RESULTS_DIR, which is what lets
-# someone outside the lab run this without editing tracked files.
+# Paths and analysis parameters. Relative paths are relative to the repository root.
+# Override the two roots with WGS_DATA_DIR and WGS_RESULTS_DIR, or point WGS_CONFIG
+# at another copy of this file.
 
-data_dir: /oak/stanford/groups/mrivas/projects/wgs-constraint-llm/data
-results_dir: /oak/stanford/groups/mrivas/projects/wgs-constraint-llm/osthoag/wgs-constraint-llm/results
+data_dir: data
+results_dir: results
 
-# Input files, resolved relative to data_dir unless given as absolute paths.
+# Inputs, relative to data_dir. See DATA.md for sources and checksums.
 inputs:
+  rgc_variants: rgc_me_variant_frequencies_20231004.vcf.gz
+  aou_variants: aou_variants.tsv.gz
+  gnomad_exome_coverage: gnomad.exomes.v4.0.coverage.summary.tsv.bgz
+  gnomad_constraint: gnomad.v4.0.constraint_metrics.tsv
   gene_annotation: gencode.v44.basic.annotation.gtf.gz
   epi25_variants: epi25_variant_results.tsv.gz
   alphamissense: AlphaMissense_hg38.tsv.gz
   genes4epilepsy: EpilepsyGenes_v2025-09.tsv
   gerp_bigwig: All_hg38_RS.bw
+  schema_variants: SCHEMA_variant_results_hg38.tsv.gz
+  schema_genes: SCHEMA_gene_results.tsv.bgz
 
-# Resolved relative to results_dir.
+# Inputs produced by an earlier stage, relative to results_dir.
 derived:
   hmm_predictions: HMM_rgc_0.9_over20_chr2_predictions_rgc_wes.tsv.gz
 
-# Analysis parameters. These are the values behind the submitted results; changing
-# one changes the published numbers, so they live in version control rather than
-# being retyped per notebook cell.
+# Analysis parameters behind the published results.
 params:
   min_variants: 25            # per gene-group inclusion floor
   exome_wide_threshold: 3.4e-7

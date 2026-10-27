@@ -1,63 +1,15 @@
-*.gz
-all results/
+# Inputs are not redistributed (see DATA.md).
 data/
 
-# ---------------------------------------------------------------------------
-# Added 2026-08-09 with the pipeline overhaul.
-# ---------------------------------------------------------------------------
-
-# Variant-level intermediates. ~180 MB each, above GitHub's 100 MB limit, and
-# derived from controlled-access Epi25 data -- these must not be published.
-results/constraint_gerp_am_epi25_variants*.tsv.gz
-results/constraint_gerp_am_scz_variants*.tsv.gz
-results/constraint_am_epi25_*.tsv.gz
-results/constraint_am_scz_*.tsv.gz
-results/*_SMOKE_*.tsv.gz
-
-# Large derived prediction tables, distributed via figshare instead.
-results/HMM_rgc_*.tsv.gz
-HMM_rgc_*.tsv.gz
-
-# Superseded exploratory runs kept on the cluster, not in version control.
-results/*_REPRO.tsv
-results/*_GERPONLY.tsv
-results/*_AMONLY.tsv
-results/*_SMOKE_*.tsv
-results/epilepsy_unified_model_pvalues_test.tsv
-results/epilepsy_unified_model_pvalues_metafor.tsv
-
-# Working area for the correction; the baseline snapshot is large and lives on
-# the cluster.
-genentech_fix/baseline_R2/
-genentech_fix/logs/
-genentech_fix/.venv*/
-genentech_fix/*.xlsx
+# Large derived tables (rebuilt by the pipeline; the RGC-ME predictions are on figshare).
+results/*.tsv.gz
+logs/
 
 # Python
 __pycache__/
 *.py[cod]
 .pytest_cache/
-.ipynb_checkpoints/
 *.egg-info/
 
 # Editors / OS
 .DS_Store
-.Rhistory
-.RData
-
-# Slurm job logs.
-logs/
-
-# Gate scratch. The _REGATE and _REPRO suffixes exist so a gate can rebuild an
-# artifact and compare it against the committed one. Tracking the rebuilds means
-# every validation run dirties the tree, which is how a `git checkout` failed
-# mid-merge on 2026-08-12 and pushed a half-finished main.
-results/*_REGATE.*
-results/*_REPRO.*
-results/*_FIXEDCHK.*
-results/*_SELFCHK.*
-results/*_VIAFIG.*
-results/*_ASPUBLISHED.*
-
-# The dashboard ships its gene-level results table (no variant-level data).
-!dashboard/epilepsy_unified_model_results.tsv.gz

@@ -1,8 +1,7 @@
 """Tests for gene-level constraint aggregation.
 
-The interval-overlap function replaces a linear scan with binary search. That is
-the only place in the overhaul where an algorithm changed rather than moving,
-so it is checked against a literal transcription of the original.
+fraction_in_intervals uses binary search where the original code scanned every
+position, so it is checked against a copy of the original.
 """
 
 import numpy as np
@@ -14,8 +13,8 @@ from wgs_constraint.gene_constraint import (
 )
 
 
-def notebook_overlap(intervals, positions_by_chrom):
-    """Verbatim transcription of the notebook's implementation."""
+def original_overlap(intervals, positions_by_chrom):
+    """The original implementation."""
     def calculate_overlap(row, chr_pos_dict):
         positions = chr_pos_dict[row["chr"]]
         return np.sum((row["start"] <= positions)
@@ -30,12 +29,12 @@ def make_intervals(rows):
     return df
 
 
-def test_matches_the_notebook_on_a_worked_example():
+def test_matches_the_original_on_a_worked_example():
     intervals = make_intervals([("chr1", 10, 19), ("chr1", 100, 109)])
     positions = {"chr1": np.array([9, 10, 15, 19, 20, 105])}
 
     fast = fraction_in_intervals(intervals, positions)
-    slow = notebook_overlap(intervals, positions)
+    slow = original_overlap(intervals, positions)
 
     assert fast == pytest.approx(slow)
     # 10, 15 and 19 fall inside [10, 19]; length 10
@@ -50,8 +49,7 @@ def test_endpoints_are_inclusive_at_both_ends():
 
 
 def test_unsorted_positions_are_handled():
-    """The notebook scanned linearly so order never mattered; binary search
-    requires sorting, which the function must do itself."""
+    """Binary search needs sorted positions; the function sorts them itself."""
     intervals = make_intervals([("chr1", 10, 20)])
     shuffled = {"chr1": np.array([20, 11, 5, 19, 100, 10])}
     ordered = {"chr1": np.array([5, 10, 11, 19, 20, 100])}
@@ -59,7 +57,7 @@ def test_unsorted_positions_are_handled():
             == pytest.approx(fraction_in_intervals(intervals, ordered)))
 
 
-def test_agrees_with_the_notebook_on_random_data():
+def test_agrees_with_the_original_on_random_data():
     rng = np.random.default_rng(20260811)
     for _ in range(25):
         positions = {
@@ -74,7 +72,7 @@ def test_agrees_with_the_notebook_on_random_data():
         intervals = make_intervals(rows)
 
         assert fraction_in_intervals(intervals, positions) == pytest.approx(
-            notebook_overlap(intervals, positions))
+            original_overlap(intervals, positions))
 
 
 def test_chromosome_absent_from_predictions_gives_zero():

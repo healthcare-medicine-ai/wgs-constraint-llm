@@ -1,14 +1,10 @@
 """The unified meta-regression, shared by the epilepsy and schizophrenia analyses.
 
-Both cohorts run the identical model: Haldane-Anscombe effect sizes from allele
-counts, inverse-variance weighted least squares per gene-group, five moderators,
-whole-model F-test as the reported p-value. In the notebooks this was two
-verbatim copies that differed only in file paths -- the same duplication that
-turned one GERP defect into three.
-
-What is genuinely cohort-specific is only the mapping from consequence
-annotation to the pLoF and missense indicators: Epi25 uses a small controlled
-vocabulary, SCHEMA a larger VEP-style one. That mapping stays with the caller.
+Both cohorts run the same model: Haldane-Anscombe effect sizes from allele
+counts, inverse-variance weighted least squares per gene-group on five
+moderators, and the whole-model F-test as the reported p-value. Only the
+mapping from consequence annotation to the pLoF and missense indicators is
+cohort-specific, and that stays with the caller.
 """
 
 from __future__ import annotations
@@ -30,39 +26,19 @@ def haldane_effect_sizes(df: pd.DataFrame, *, max_allele_count: int = 5
                          ) -> pd.DataFrame:
     """Apply the rare-variant cut and attach effect sizes.
 
-    ``effect_size`` is the Haldane--Anscombe corrected log odds ratio and
-    ``var_effect_size`` its Woolf variance, both computed directly from allele
-    counts with a 0.5 continuity correction. No Firth statistics are used.
+    ``effect_size`` is the Haldane-Anscombe corrected log odds ratio and
+    ``var_effect_size`` its Woolf variance, both from allele counts with a 0.5
+    continuity correction. The cut is on allele count, ``ac_case + ac_ctrl <=
+    max_allele_count``, not on frequency.
 
-    The cut is on **allele count**, not frequency: across Epi25's ~108,800
-    alleles ``ac_case + ac_ctrl <= 5`` is a MAF of roughly 5e-5.
-
-    .. warning::
-       **How you filtered ``df`` before calling this changes the answer's last
-       bit.** ``np.log`` below picks its vectorised loop from the array's memory
-       layout, and boolean masking, ``.isin()`` and ``.copy()`` each build that
-       array differently. They select identical rows and give identical values
-       to about fifteen figures -- but not bit-identical ones, so a reproduction
-       gate fails.
-
-       Filter with chained ``!=`` comparisons, matching the original notebooks,
-       not ``.isin()``. In ``epi25.py`` that change was measured to restore
-       bit-identity. In ``pipelines/11`` the same change made no difference at
-       all -- ``effect_size`` stayed 80.38% bit-identical either way -- so the
-       memory-layout account is at best incomplete, and matching the notebook
-       literally is the reliable rule rather than the explanation for it.
-
-       If you are writing a new caller, copy the filtering style from
-       ``epi25.load_epi25_variants`` rather than writing the tidy version, and
-       gate the result. Do not assume a tidier form is safe because you have a
-       story for why it should be.
+    How ``df`` was filtered before this call can change the last bit of
+    ``effect_size``: ``np.log`` picks its vectorised loop from the array's
+    memory layout, and boolean masking, ``.isin()`` and ``.copy()`` each build
+    that array differently. Values agree to about fifteen figures either way,
+    but to stay bit-identical with the reference results, filter as
+    ``epi25.load_epi25_variants`` does (chained ``!=``), and do not add a
+    ``.copy()`` here.
     """
-    # No .copy() here, deliberately. Boolean masking already returns a new
-    # frame; adding a second copy changes the array's memory layout, which
-    # changes which vectorised path numpy selects for np.log, which perturbs
-    # effect_size by one unit in the last place. That is numerically
-    # irrelevant but it breaks bit-for-bit reproduction of the submitted
-    # results, and an exact gate is worth more than a tidier line.
     out = df[(df["ac_ctrl"] + df["ac_case"] <= max_allele_count)
              & (df["an_case"] > 0) & (df["an_ctrl"] > 0)]
 
@@ -80,11 +56,13 @@ def haldane_effect_sizes(df: pd.DataFrame, *, max_allele_count: int = 5
 
 def prepare_regression_input(df: pd.DataFrame, *, clip_epsilon: float = 0.01
                              ) -> pd.DataFrame:
-    """Clip, impute, transform and drop, exactly as the notebooks did.
+    """Clip, impute and transform the moderators.
 
-    Note that GERP enters the model untransformed; only the two probabilities
-    are put through ``-log1p(-x)``. Missing moderator values are filled with
-    the column mean over the whole table, not within gene.
+    The two probabilities (``prob_0``, ``am_pathogenicity``) are clipped to
+    ``[eps, 1 - eps]`` and transformed as ``-log1p(-x)``; GERP enters the model
+    untransformed. Missing moderator values are filled with the column mean
+    over the whole table, not within gene. Rows with a missing or zero
+    variance are dropped.
     """
     out = df.copy()
     eps = clip_epsilon
@@ -107,30 +85,20 @@ def fit_per_gene(input_df: pd.DataFrame, *, moderators: list[str] | None = None,
                  progress: bool = True) -> pd.DataFrame:
     """Weighted least squares per (gene_id, gene_name, group).
 
-    Genes with any missing moderator are skipped, matching the notebooks. The
-    reported ``p_unified`` is ``model.f_pvalue`` -- the F-test for the whole
-    regression, not a coefficient p-value. External groups have repeatedly
-    misread this as a coefficient test.
+    Weights are ``1 / var_effect_size``. ``p_unified`` is ``model.f_pvalue``,
+    the F-test for the whole regression, not a coefficient p-value. The full
+    model also reports each moderator's coefficient p-value.
 
-    .. note::
-       ``p_unified`` may come back as an **object** column. ``scipy.stats.f.sf``
-       returns a 0-d array rather than a scalar for some models, and one such
-       value makes pandas infer object dtype for the whole column. ``np.log10``
-       then raises instead of vectorising. Callers taking logs should use
-       ``.to_numpy(dtype=float)``; ``pd.to_numeric`` alone has not been reliable
-       here. Both ``pipelines/07`` and ``pipelines/11`` were bitten by this.
+    Gene-groups with any missing moderator, or whose fit fails, are skipped.
 
-    ``moderators`` fits a subset, for the leave-one-out ablations behind
-    Supplementary Figures S1-S4 (``pipelines/07``). The default full-model path
-    is left byte-for-byte as it was, including the order in which result columns
-    are built, because ``jobs/gate_01_definitive.sbatch`` asserts bit-identity
-    against the submitted p-values and column order reaches the written TSV.
-    Ablations emit only the five columns the published MINUS_* tables carry.
+    ``moderators`` fits a subset of :data:`MODERATORS` (the leave-one-out
+    ablations) and then reports only ``n_variants`` and ``p_unified``. The skip
+    rule still tests all five moderators, so an ablation covers exactly the
+    gene-groups of the full model.
 
-    The skip condition deliberately still tests **all five** moderators even
-    when fitting a subset: the published ablation tables each hold the same
-    72,386 gene-groups as the full model, so they were produced that way, and
-    testing only the subset would silently admit genes the full model dropped.
+    ``p_unified`` can come back as an object column, because
+    ``scipy.stats.f.sf`` returns a 0-d array for some models; use
+    ``.to_numpy(dtype=float)`` before taking logs.
     """
     subset = moderators is not None
     mods = list(MODERATORS) if moderators is None else list(moderators)
@@ -139,6 +107,7 @@ def fit_per_gene(input_df: pd.DataFrame, *, moderators: list[str] | None = None,
         raise ValueError(f"unknown moderator(s): {sorted(unknown)}")
     if not mods:
         raise ValueError("at least one moderator is required")
+
     grouped = input_df.groupby(GROUP_KEY)
     iterator = grouped
     if progress:
@@ -150,7 +119,6 @@ def fit_per_gene(input_df: pd.DataFrame, *, moderators: list[str] | None = None,
 
     required = MODERATORS + ["effect_size", "var_effect_size"]
     results = []
-
     for (gene_id, gene_name, group), data in iterator:
         if data[required].isnull().any().any():
             continue
@@ -160,22 +128,17 @@ def fit_per_gene(input_df: pd.DataFrame, *, moderators: list[str] | None = None,
                         missing="drop").fit()
         except Exception:
             continue
-        if subset:
-            results.append({
-                "gene_id": gene_id, "gene_name": gene_name, "group": group,
-                "n_variants": len(data),
-                "p_unified": model.f_pvalue,
+        row = {"gene_id": gene_id, "gene_name": gene_name, "group": group,
+               "n_variants": len(data)}
+        if not subset:
+            row.update({
+                "p_constraint": model.pvalues["log_constraint"],
+                "p_gerp": model.pvalues["GERP_RS"],
+                "p_pathogenicity": model.pvalues["log_pathogenicity"],
+                "p_pLoF": model.pvalues["pLoF_ind"],
+                "p_missense": model.pvalues["missense_ind"],
             })
-            continue
-        results.append({
-            "gene_id": gene_id, "gene_name": gene_name, "group": group,
-            "n_variants": len(data),
-            "p_constraint": model.pvalues["log_constraint"],
-            "p_gerp": model.pvalues["GERP_RS"],
-            "p_pathogenicity": model.pvalues["log_pathogenicity"],
-            "p_pLoF": model.pvalues["pLoF_ind"],
-            "p_missense": model.pvalues["missense_ind"],
-            "p_unified": model.f_pvalue,
-        })
+        row["p_unified"] = model.f_pvalue
+        results.append(row)
 
     return pd.DataFrame(results)

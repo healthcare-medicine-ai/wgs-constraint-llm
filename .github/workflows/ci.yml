@@ -1,14 +1,7 @@
 name: ci
 
-# What this can and cannot check. Every input to the analysis is either
-# controlled-access (Epi25), hundreds of gigabytes (the GERP bigWig), or both,
-# so none of it can live on a runner. CI therefore checks that the shared
-# library is correct against synthetic fixtures -- including the two defects
-# corrected in August 2026, each of which has a test that fails against the
-# pre-correction code.
-#
-# Reproducing the manuscript is a separate matter and runs on Sherlock via
-# jobs/*.sbatch. See docs/OVERHAUL_PLAN.md for the gate rules.
+# Lint and unit tests on synthetic data. The analysis itself needs inputs that
+# are controlled-access or hundreds of gigabytes, so it is not run here.
 
 on:
   push:
@@ -35,12 +28,7 @@ jobs:
         with:
           python-version: "3.11"
           cache: pip
-      # pyBigWig links against libcurl and zlib and has no universal wheel.
-      - name: system libraries for pyBigWig
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libcurl4-openssl-dev zlib1g-dev
-      # The exact pins that produced the published numbers.
+      # pyBigWig builds against libcurl and zlib.
+      - run: sudo apt-get update && sudo apt-get install -y libcurl4-openssl-dev zlib1g-dev
       - run: pip install -r requirements.txt
-      - run: pip install -e .
       - run: pytest -q

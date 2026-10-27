@@ -69,7 +69,8 @@ else:
     rows = df[(df["group"] == group) & (df["p_unified"] < cutoff)]
     st.subheader(f"Epilepsy results for analysis group: {group} ({len(rows):,} genes)")
 st.dataframe(table(rows), hide_index=True, width="stretch")
-st.download_button("Download these rows (TSV)", rows[list(COLUMNS)[:-1] + ["genes4epilepsy"]].to_csv(sep="\t", index=False),
+download = rows[list(COLUMNS)[:-1] + ["genes4epilepsy"]].to_csv(sep="\t", index=False)
+st.download_button("Download these rows (TSV)", download,
                    f"unified_model_{'search' if genes else group}.tsv", "text/tab-separated-values")
 
 grp = df[df["group"] == group]

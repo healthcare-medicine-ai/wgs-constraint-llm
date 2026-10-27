@@ -1,15 +1,7 @@
-"""Shared components for the WGS constraint / unified meta-regression analyses.
+"""Shared code for the HMM constraint model and the unified meta-regression.
 
-Importing from here rather than copy-pasting into notebooks is the point: the
-GERP annotation existed in three notebooks with the same coordinate defect in
-each, and correcting one did nothing for the others.
-
-Typical use from a notebook::
-
-    import sys; sys.path.insert(0, "src")
-    from wgs_constraint import get_config, annotate_with_gerp
-    cfg = get_config()
-    merged = annotate_with_gerp(pred, cfg.data("gerp_bigwig"))
+The pipeline stages in pipelines/ import from here, so each step (GERP lookup,
+AlphaMissense collapse, Epi25 filtering, the regression) is implemented once.
 """
 
 from .alphamissense import collapse, load_collapsed

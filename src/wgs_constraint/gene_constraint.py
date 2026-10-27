@@ -1,19 +1,7 @@
-"""Gene-level aggregation of HMM constraint against published constraint metrics.
+"""Per-interval HMM constraint compared with published constraint metrics (Figure 3).
 
-Supports Figures 3a and 3b: for each protein-coding CDS interval, what fraction
-of its bases the HMM calls constrained above a threshold, compared with gnomAD's
-missense z-score and with the missense tolerance ratio.
-
-Performance note. The notebook computed the per-interval fraction with a full
-scan of the chromosome's position array for every CDS row:
-
-    np.sum((row['start'] <= positions) & (positions <= row['end'])) / row['length']
-
-That is O(intervals x positions) -- roughly 650,000 intervals against tens of
-millions of positions. Here the positions are sorted once per chromosome and
-each interval resolved with two binary searches, which is O(intervals log n) and
-returns exactly the same counts: both compute the number of positions p with
-start <= p <= end. The equivalence is asserted in the tests on random data.
+For each protein-coding CDS interval: the fraction of its bases the HMM calls
+constrained, set against gnomAD's missense z-score and the missense tolerance ratio.
 """
 
 from __future__ import annotations
@@ -26,7 +14,7 @@ __all__ = ["compute_mtr", "load_gene_constraint", "add_constraint_proportions",
 
 
 def compute_mtr(constraint: pd.DataFrame) -> pd.Series:
-    """Missense tolerance ratio, as defined in the notebook.
+    """Missense tolerance ratio.
 
     Observed missense share of observed coding variation, divided by the same
     quantity expected.
@@ -41,7 +29,7 @@ def load_gene_constraint(gene_annotation: pd.DataFrame,
 
     Joined on (gene_name, transcript) against (gene, transcript), inner, so only
     transcripts present in both survive. ``length`` is the inclusive interval
-    width, matching the notebook's ``abs(end - start) + 1``.
+    width, ``abs(end - start) + 1``.
     """
     constraint = pd.read_csv(constraint_path, sep="\t")
     constraint["MTR"] = compute_mtr(constraint)
@@ -59,7 +47,8 @@ def fraction_in_intervals(intervals: pd.DataFrame,
     """Fraction of each interval's bases that appear in the position set.
 
     ``intervals`` needs ``chr``, ``start``, ``end`` and ``length``. Positions
-    are assumed inclusive of both endpoints, as in the original.
+    are inclusive of both endpoints. Uses two binary searches per interval
+    rather than a scan of every position.
     """
     sorted_positions = {c: np.sort(np.asarray(p))
                         for c, p in positions_by_chrom.items()}
@@ -96,11 +85,7 @@ def add_constraint_proportions(gene_constraint: pd.DataFrame,
 
 
 def ols_r_squared(frame: pd.DataFrame, x: str, y: str) -> float:
-    """R-squared of an ordinary least squares fit of y on x, NaNs dropped.
-
-    The notebook hardcoded this value for one of the two panels; computing it
-    means the annotation cannot drift away from the data it describes.
-    """
+    """R-squared of an ordinary least squares fit of y on x, NaNs dropped."""
     import statsmodels.api as sm
     d = frame.dropna(subset=[x, y])
     model = sm.OLS(d[y], sm.add_constant(d[x])).fit()
