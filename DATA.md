@@ -22,9 +22,12 @@ File names must match `config.yaml`. md5 is of the file as downloaded.
 | `SCHEMA_gene_results.tsv.bgz` | SCHEMA gene results, https://schema.broadinstitute.org/ | 516,894 | `97877e41d294ce835bb6c69f346a8f76` |
 | `hg19ToHg38.over.chain.gz` | UCSC, https://hgdownload.soe.ucsc.edu/goldenPath/hg19/liftOver/hg19ToHg38.over.chain.gz | 227,698 | `35887f73fe5e2231656504d1f6430900` |
 
-The RGC-ME constraint predictions written by stage 01 (`HMM_rgc_0.9_over20_chr2_predictions_rgc_wes.tsv.gz`,
-538,175,139 bytes, md5 `d0b013f019b01f50f1f522b760da8e2c`) are also published at
-https://doi.org/10.6084/m9.figshare.27184245.v1. With that file in `results/`, stages 02–04 and 06–09
+The constraint predictions written by stage 01 are published at
+https://doi.org/10.6084/m9.figshare.27184245.v2: RGC-ME
+(`HMM_rgc_0.9_over20_chr2_predictions_rgc_wes.tsv.gz`, 538,175,139 bytes, md5
+`d0b013f019b01f50f1f522b760da8e2c`) and All of Us (`HMM_rgc_0.9_over20_chr2_predictions_aou_wes.tsv.gz`,
+587,046,190 bytes, md5 `d1f6b1b9cea318092889bea431a7a797`). The All of Us file in version 1 has no
+observed variants and should not be used. With the RGC-ME file in `results/`, stages 02–04 and 06–09
 run without the RGC-ME, All of Us and gnomAD coverage inputs.
 
 ## Notes
@@ -38,7 +41,8 @@ different coding intervals.
 the UCSC chain above, with no options. The lifted file is on figshare.
 
 **All of Us.** `aou_variants.tsv.gz` has one row per variant site (`chr`, `pos`) in the All of Us
-short-read genome callset *[confirm: CDR v7, 245,388 participants; all sites or only PASS sites]*.
+short-read genome callset. The callset version, and whether non-PASS sites were kept, were not
+recorded.
 It was exported from the controlled-tier Researcher Workbench as eight files of variant IDs
 (`chr-pos-ref-alt`), which were concatenated and reduced to unique positions. It cannot be
 redistributed. Only stage 01 reads it, to make the All of Us predictions that stage 05 uses.
