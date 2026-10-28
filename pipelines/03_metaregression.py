@@ -11,7 +11,8 @@ same group and with Genes4Epilepsy membership.
 
 Inputs
   results/epilepsy_regression_input.tsv.gz    from stage 02
-  data/<group>_results_2023_12_30_14_36_*.csv  Epi25 gene results, per group
+  data/<group>_results_2023_12_30_14_36_*.csv  Epi25 gene results, per group (config
+                                               keys epi25_genes_<group>)
   data/EpilepsyGenes_v2025-09.tsv              Genes4Epilepsy
 
 Output
@@ -25,7 +26,7 @@ Output
                     Epi25 has no result)
     genes4epilepsy  listed in Genes4Epilepsy
 
-The manuscript's comparison with Epi25 (Table A1, Tables 1 and 2) uses the
+The manuscript's comparison with Epi25 (Tables 1, 2 and S1) uses the
 rows with in_epi25 true.
 """
 
@@ -54,9 +55,7 @@ def epi25_gene_results(cfg, groups):
     """Epi25 DM and PTV p-values for every gene in each group, stacked."""
     parts = []
     for group in groups:
-        path = sorted(cfg.data_dir.glob(
-            f"{group}_results_2023_12_30_14_36_*.csv"))[0]
-        epi25 = pd.read_csv(path)
+        epi25 = pd.read_csv(cfg.data(f"epi25_genes_{group}"))
         dm = next(c for c in epi25.columns if c.startswith("Damaging Missense p"))
         ptv = next(c for c in epi25.columns if c.startswith("PTV p"))
         parts.append(pd.DataFrame({

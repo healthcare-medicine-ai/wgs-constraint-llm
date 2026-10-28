@@ -55,6 +55,7 @@ Stages 01, 02 + 03, 08 and 09 each take 40–45 minutes on one node; the others 
 minutes. Stage 02 needs about 128 GB of memory, the rest 32–64 GB. Stage 01 loads the trained
 model from `results/` if it is there. Training gives bit-identical parameters only on the same
 CPU generation, so use the saved model to reproduce the published predictions exactly.
+Stage 05 labels Figure 2's panels in Arial Bold and stops if Arial is not installed.
 
 ## Tests
 

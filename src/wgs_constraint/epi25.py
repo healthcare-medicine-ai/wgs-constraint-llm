@@ -18,19 +18,21 @@ VARIANT_KEY = ["chr", "pos", "ref", "alt"]
 
 
 def load_gene_annotation(gtf_path) -> pd.DataFrame:
-    """Protein-coding CDS records from a GENCODE GTF, with a versionless id."""
+    """Protein-coding CDS records from a GENCODE GTF, with versionless gene
+    (``std_gene_id``) and transcript (``transcript``) ids."""
     genes = pd.read_csv(
         gtf_path, sep="\t", comment="#", header=None,
         names=["chr", "source", "feature", "start", "end", "score",
                "strand", "frame", "attribute"],
         dtype={"start": int, "end": int},
     )
-    for field in ("gene_id", "gene_type", "gene_name"):
+    for field in ("gene_id", "gene_type", "gene_name", "transcript_id"):
         genes[field] = genes["attribute"].str.extract(rf'{field} "(.*?)"')
     genes = genes.drop("attribute", axis=1)
     genes = genes[(genes["gene_type"] == "protein_coding")
                   & (genes["feature"] == "CDS")]
     genes["std_gene_id"] = genes["gene_id"].str.split(".").str[0]
+    genes["transcript"] = genes["transcript_id"].str.split(".").str[0]
     return genes
 
 

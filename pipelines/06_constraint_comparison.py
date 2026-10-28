@@ -34,11 +34,11 @@ from matplotlib.colors import LinearSegmentedColormap  # noqa: E402
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from wgs_constraint import get_config  # noqa: E402
+from wgs_constraint.epi25 import load_gene_annotation  # noqa: E402
 from wgs_constraint.gene_constraint import (  # noqa: E402
     add_constraint_proportions, load_gene_constraint, ols_r_squared,
 )
 
-CONSTRAINT_GERP = "HMM_rgc_ALL_RS_merged_predictions.tsv.gz"
 OUT = "figure_3.png"
 COL = "proportion_over_50"
 PROB_BINS = np.arange(0, 1.1, 0.1)
@@ -53,20 +53,6 @@ WHITE_VIRIDIS = LinearSegmentedColormap.from_list("white_viridis", [
 
 def log(msg=""):
     print(msg, flush=True)
-
-
-def cds_intervals(gtf_path):
-    """Protein-coding CDS records with a versionless transcript id."""
-    gtf = pd.read_csv(gtf_path, sep="\t", comment="#", header=None,
-                      names=["chr", "source", "feature", "start", "end",
-                             "score", "strand", "frame", "attribute"],
-                      dtype={"start": int, "end": int})
-    gtf["gene_type"] = gtf["attribute"].str.extract(r'gene_type "(.*?)"')
-    gtf["gene_name"] = gtf["attribute"].str.extract(r'gene_name "(.*?)"')
-    gtf["transcript"] = (gtf["attribute"].str.extract(r'transcript_id "(.*?)"')[0]
-                         .str.split(".").str[0])
-    gtf = gtf[(gtf["gene_type"] == "protein_coding") & (gtf["feature"] == "CDS")]
-    return gtf.drop(columns=["attribute"])
 
 
 def per_transcript(intervals):
@@ -156,13 +142,15 @@ def main():
     log(cfg.describe())
 
     log("loading constraint + GERP table ...")
-    table = pd.read_csv(cfg.result(CONSTRAINT_GERP), sep="\t",
+    table = pd.read_csv(cfg.derived("constraint_gerp"), sep="\t",
                         usecols=["chr", "pos", "prob_0", "GERP_RS"])
     log(f"  {len(table):,} positions")
 
     log("constrained fraction per CDS interval and transcript ...")
-    intervals = load_gene_constraint(cds_intervals(cfg.data("gene_annotation")),
-                                     cfg.data("gnomad_constraint"))
+    cds = load_gene_annotation(cfg.data("gene_annotation"))
+    intervals = load_gene_constraint(
+        cds[["chr", "start", "end", "gene_name", "transcript"]],
+        cfg.data("gnomad_constraint"))
     intervals = add_constraint_proportions(intervals, table, thresholds=(0.5,))
     tx = per_transcript(intervals)
     log(f"  {len(intervals):,} CDS intervals, {len(tx):,} transcripts")

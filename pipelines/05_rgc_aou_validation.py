@@ -21,8 +21,9 @@ Input (results/)
   HMM_rgc_0.9_over20_chr2_joint_predictions_aou_rgc_wes.tsv.gz
 Outputs (results/)
   figure_2.png
-  rgc_vs_hmm_effect_sizes.csv           marginal odds ratios; McFadden R2 of
-                                        the RGC, HMM and joint models
+  rgc_vs_hmm_effect_sizes.csv           marginal odds ratio, 95% CI and phi of
+                                        RGC and HMM; McFadden R2 of the RGC-only,
+                                        HMM-only and joint logistic models
   rgc_vs_hmm_threshold_sensitivity.csv  HMM odds ratio at thresholds 0.2-0.9
   rgc_vs_hmm_by_rgc_status.csv          HMM 2x2 within RGC-invariant sites
 """
@@ -245,13 +246,11 @@ def rgc_vs_hmm(df, cfg):
     log(f"  HMM over RGC: +{inc_c:.6f} ({inc_c / c_both['mcfadden']:.1%} of joint R2)")
 
     summary = pd.DataFrame([
-        dict(analysis="RGC binary, marginal", odds_ratio=rgc["odds_ratio"],
-             ci_lo=rgc["or_lo"], ci_hi=rgc["or_hi"], phi=rgc["phi"]),
-        dict(analysis="HMM binarized, marginal", odds_ratio=hmm["odds_ratio"],
-             ci_lo=hmm["or_lo"], ci_hi=hmm["or_hi"], phi=hmm["phi"]),
-        dict(analysis="nested: McFadden RGC / HMM / both",
-             odds_ratio=m_rgc["mcfadden"], ci_lo=m_hmm["mcfadden"], ci_hi=joint,
-             phi=inc_hmm / joint),
+        dict(predictor="RGC binary", odds_ratio=rgc["odds_ratio"], ci_lo=rgc["or_lo"],
+             ci_hi=rgc["or_hi"], phi=rgc["phi"], mcfadden_r2=m_rgc["mcfadden"]),
+        dict(predictor="HMM binarized", odds_ratio=hmm["odds_ratio"], ci_lo=hmm["or_lo"],
+             ci_hi=hmm["or_hi"], phi=hmm["phi"], mcfadden_r2=m_hmm["mcfadden"]),
+        dict(predictor="RGC and HMM", mcfadden_r2=joint),
     ])
     summary.to_csv(cfg.result("rgc_vs_hmm_effect_sizes.csv"), index=False)
     sens.to_csv(cfg.result("rgc_vs_hmm_threshold_sensitivity.csv"), index=False)

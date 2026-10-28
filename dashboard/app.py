@@ -1,8 +1,9 @@
 """Epilepsy exome sequencing dashboard: gene-level results of the unified meta-regression model.
 
-Layout follows the Rivas Lab dashboard (github.com/marivascruz/epilepsy-dashboard); data are the corrected
-results reported in the AJHG manuscript: one row per gene-group with at least 25 rare variants (66,748 rows),
-with Epi25 damaging-missense and PTV gene-level p-values where Epi25 reports them.
+Layout follows the Rivas Lab dashboard (github.com/marivascruz/epilepsy-dashboard). Data are
+results/epilepsy_gene_results.tsv as written by pipelines/03_metaregression.py: one row per gene-group with
+at least 25 rare variants (66,748 rows), with Epi25 damaging-missense and PTV gene-level p-values where Epi25
+reports them.
 """
 from pathlib import Path
 
@@ -11,7 +12,7 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 
-DATA = Path(__file__).parent / "epilepsy_unified_model_results.tsv.gz"
+DATA = Path(__file__).resolve().parents[1] / "results" / "epilepsy_gene_results.tsv"
 EXOME_WIDE = 3.4e-7
 GROUPS = {"DEE": "Developmental and epileptic encephalopathy", "GGE": "Genetic generalized epilepsy",
           "NAFE": "Non-acquired focal epilepsy", "EPI": "All epilepsy"}
@@ -27,7 +28,7 @@ st.set_page_config(page_title="Epilepsy exome sequencing dashboard", layout="wid
 @st.cache_data
 def load():
     df = pd.read_csv(DATA, sep="\t")
-    df["g4e"] = df["genes4epilepsy"].map({True: "yes", False: "no"}).fillna("not assessed")
+    df["g4e"] = df["genes4epilepsy"].map({True: "yes", False: "no"})
     df["-log10 p"] = -np.log10(df["p_unified"])
     df["-log10 p Epi25"] = -np.log10(df[["p_epi25_dm", "p_epi25_ptv"]].min(axis=1))
     return df.sort_values("p_unified")
@@ -76,7 +77,7 @@ st.download_button("Download these rows (TSV)", download,
 grp = df[df["group"] == group]
 top = grp[grp["p_unified"] <= 1e-5]
 fig = px.scatter(top, x="gene_name", y="-log10 p", color="g4e", hover_data=["gene_id", "n_variants"],
-                 color_discrete_map={"yes": "#00c4b4", "no": "#f5a623", "not assessed": "#9e9e9e"},
+                 color_discrete_map={"yes": "#00c4b4", "no": "#f5a623"},
                  labels={"gene_name": "Gene", "-log10 p": "-log10(p unified)", "g4e": "Genes4Epilepsy"},
                  title=f"Top genes for group {group} (unified model p ≤ 1e-5)", template="plotly_dark")
 fig.add_hline(y=-np.log10(EXOME_WIDE), line=dict(color="red", dash="dash"), annotation_text="exome-wide 3.4e-7")

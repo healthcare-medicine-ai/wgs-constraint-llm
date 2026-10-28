@@ -27,6 +27,7 @@ import matplotlib.pyplot as plt  # noqa: E402
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from wgs_constraint import get_config  # noqa: E402
+from wgs_constraint.epi25 import load_gene_annotation  # noqa: E402
 
 GENE = "SCN1A"
 START_OFFSET = 750     # rows trimmed from the start of the gene's range
@@ -36,14 +37,8 @@ OUT = "figure_1.png"
 
 def gene_rows(predictions, gtf_path, gene_name):
     """First and last row of the predictions table inside the gene's CDS span."""
-    gtf = pd.read_csv(gtf_path, sep="\t", comment="#", header=None,
-                      names=["chr", "source", "feature", "start", "end",
-                             "score", "strand", "frame", "attribute"],
-                      dtype={"start": int, "end": int})
-    gtf["gene_type"] = gtf["attribute"].str.extract(r'gene_type "(.*?)"')
-    gtf["gene_name"] = gtf["attribute"].str.extract(r'gene_name "(.*?)"')
-    gene = gtf[(gtf["gene_type"] == "protein_coding") & (gtf["feature"] == "CDS")
-               & (gtf["gene_name"] == gene_name)]
+    cds = load_gene_annotation(gtf_path)
+    gene = cds[cds["gene_name"] == gene_name]
     chrom, start, end = max(gene["chr"]), gene["start"].min(), gene["end"].max()
 
     on_chrom = predictions["chr"] == chrom

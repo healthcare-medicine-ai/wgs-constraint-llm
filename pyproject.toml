@@ -16,11 +16,13 @@ dependencies = [
     "scipy>=1.11",
     "statsmodels>=0.14",
     "hmmlearn>=0.3",
+    "joblib>=1.2",
     "pyBigWig>=0.3.22",
     "pyliftover>=0.4",
     "matplotlib>=3.7",
     "seaborn>=0.12",
     "mpl-scatter-density>=0.7",
+    "Pillow>=9.4",
     "tqdm>=4.65",
     "PyYAML>=6.0",
 ]

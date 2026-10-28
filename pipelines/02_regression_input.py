@@ -23,9 +23,10 @@ Usage
   python pipelines/02_regression_input.py
   python pipelines/02_regression_input.py --constraint-gerp HMM_rgc_ALL_RS_merged_predictions.tsv.gz
 
---constraint-gerp skips step 1 and reads the constraint + GERP table instead
-(the published figshare file, or the output of an earlier run). That avoids
-needing the 16.4 GB bigWig, and gives an identical regression input.
+--constraint-gerp skips step 1 and reads a constraint + GERP table written by
+an earlier run of this stage. That avoids reading the 16.4 GB bigWig again, and
+gives an identical regression input. Stages 06 and 09 read that table from
+results/, so keep it there.
 """
 
 from __future__ import annotations
@@ -44,7 +45,6 @@ from wgs_constraint.epi25 import (  # noqa: E402
     add_effect_sizes, load_epi25_variants, load_gene_annotation,
 )
 
-CONSTRAINT_GERP = "HMM_rgc_ALL_RS_merged_predictions.tsv.gz"
 REGRESSION_INPUT = "epilepsy_regression_input.tsv.gz"
 
 VARIANT_COLUMNS = [
@@ -69,7 +69,7 @@ def constraint_with_gerp(cfg):
     log(f"      with GERP: {len(table):,} (out of range: "
         f"{table.attrs['gerp_out_of_bounds_dropped']:,})")
 
-    out = cfg.result(CONSTRAINT_GERP)
+    out = cfg.derived("constraint_gerp")
     table.to_csv(out, sep="\t", index=False, compression="gzip")
     log(f"      wrote {out}")
     return table

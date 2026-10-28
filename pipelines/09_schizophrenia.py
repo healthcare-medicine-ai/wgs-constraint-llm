@@ -9,9 +9,9 @@ membership. SCHEMA's own gene-level meta-analysis p-value is the comparator.
 
 Inputs
   data/    gencode.v44.basic.annotation.gtf.gz, AlphaMissense_hg38.tsv.gz,
-           All_hg38_RS.bw, SCHEMA_variant_results.tsv.bgz,
-           SCHEMA_gene_results.tsv.bgz, hg19ToHg38.over.chain.gz
-  results/ HMM_rgc_0.9_over20_chr2_predictions_rgc_wes.tsv.gz
+           SCHEMA_variant_results.tsv.bgz, SCHEMA_gene_results.tsv.bgz,
+           hg19ToHg38.over.chain.gz
+  results/ HMM_rgc_ALL_RS_merged_predictions.tsv.gz (constraint + GERP, stage 02)
 Outputs (results/)
   schizophrenia_regression_input.tsv.gz  one row per (variant, gene, group)
   schizophrenia_gene_results.tsv         unified model, every gene-group
@@ -38,7 +38,7 @@ from pyliftover import LiftOver  # noqa: E402
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from wgs_constraint import (  # noqa: E402
-    annotate_with_gerp, fit_per_gene, get_config, haldane_effect_sizes,
+    fit_per_gene, get_config, haldane_effect_sizes,
     load_collapsed, prepare_regression_input,
 )
 from wgs_constraint.alphamissense import KEY_COLUMNS  # noqa: E402
@@ -175,10 +175,12 @@ def main():
     log(f"      qualifying variant rows: {len(variants):,}")
 
     log("[2/5] constraint + GERP ...")
-    predictions = pd.read_csv(cfg.derived("hmm_predictions"), sep="\t",
-                              dtype={"chr": "string"})
-    predictions["pos"] = predictions["pos"].astype("int64")
-    constraint = annotate_with_gerp(predictions, cfg.data("gerp_bigwig"))
+    # GERP was annotated as float32 (see gerp.py); reading it back as float32,
+    # and prob_0 with round_trip, recovers exactly the values stage 02 wrote.
+    constraint = pd.read_csv(cfg.derived("constraint_gerp"), sep="\t",
+                             usecols=["chr", "pos", "prob_0", "GERP_RS"],
+                             dtype={"chr": "string", "pos": "int64", "GERP_RS": "float32"},
+                             float_precision="round_trip")
     log(f"      positions with GERP: {len(constraint):,}")
 
     log("[3/5] AlphaMissense ...")

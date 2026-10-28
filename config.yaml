@@ -13,6 +13,10 @@ inputs:
   gnomad_constraint: gnomad.v4.0.constraint_metrics.tsv
   gene_annotation: gencode.v44.basic.annotation.gtf.gz
   epi25_variants: epi25_variant_results.tsv.gz
+  epi25_genes_DEE: DEE_results_2023_12_30_14_36_36.csv
+  epi25_genes_EPI: EPI_results_2023_12_30_14_36_32.csv
+  epi25_genes_GGE: GGE_results_2023_12_30_14_36_38.csv
+  epi25_genes_NAFE: NAFE_results_2023_12_30_14_36_41.csv
   alphamissense: AlphaMissense_hg38.tsv.gz
   genes4epilepsy: EpilepsyGenes_v2025-09.tsv
   gerp_bigwig: All_hg38_RS.bw
@@ -23,6 +27,7 @@ inputs:
 # Inputs produced by an earlier stage, relative to results_dir.
 derived:
   hmm_predictions: HMM_rgc_0.9_over20_chr2_predictions_rgc_wes.tsv.gz
+  constraint_gerp: HMM_rgc_ALL_RS_merged_predictions.tsv.gz
 
 # Analysis parameters behind the published results.
 params:

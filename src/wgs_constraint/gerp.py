@@ -2,10 +2,10 @@
 
 Coordinate convention
 ---------------------
-HMM prediction positions (``pos``) are 1-based. ``get_sequence()`` in
-`HMM Mutation Predictions.ipynb` builds its masks by indexing arrays directly
-with 1-based coordinates from a GENCODE GTF and a VCF, so array index ``i`` is
-1-based position ``i`` and that convention carries into ``pos``.
+HMM prediction positions (``pos``) are 1-based: ``hmm.build_sequence`` indexes
+its arrays directly with 1-based coordinates from a GENCODE GTF and a VCF, so
+array index ``i`` is 1-based position ``i`` and that convention carries into
+``pos``.
 
 ``pyBigWig.values(chrom, 0, chr_len)`` returns a vector whose element ``i`` is
 the score at 0-based coordinate ``i``. The score for 1-based position ``p`` is
