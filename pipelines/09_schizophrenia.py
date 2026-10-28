@@ -1,15 +1,16 @@
 #!/usr/bin/env python
 """Schizophrenia (SCHEMA): unified meta-regression, Table 3 and Figure 5.
 
-Runs the epilepsy model (wgs_constraint.metareg) on SCHEMA's variant results.
-What is specific to SCHEMA is the consequence vocabulary: the non-coding and
+Runs the epilepsy model (wgs_constraint.metareg) on SCHEMA's variant results,
+after lifting them from hg19 to hg38. What is specific to SCHEMA is the
+consequence vocabulary: the non-coding and
 synonymous classes below are excluded, and pLoF and missense are set by list
 membership. SCHEMA's own gene-level meta-analysis p-value is the comparator.
 
 Inputs
   data/    gencode.v44.basic.annotation.gtf.gz, AlphaMissense_hg38.tsv.gz,
-           All_hg38_RS.bw, SCHEMA_variant_results_hg38.tsv.gz,
-           SCHEMA_gene_results.tsv.bgz
+           All_hg38_RS.bw, SCHEMA_variant_results.tsv.bgz,
+           SCHEMA_gene_results.tsv.bgz, hg19ToHg38.over.chain.gz
   results/ HMM_rgc_0.9_over20_chr2_predictions_rgc_wes.tsv.gz
 Outputs (results/)
   schizophrenia_regression_input.tsv.gz  one row per (variant, gene, group)
@@ -22,6 +23,7 @@ Outputs (results/)
 
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 
@@ -32,6 +34,7 @@ import pandas as pd
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 from matplotlib.colors import LogNorm  # noqa: E402
+from pyliftover import LiftOver  # noqa: E402
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from wgs_constraint import (  # noqa: E402
@@ -79,9 +82,28 @@ def log(msg):
     print(msg, flush=True)
 
 
+def lift_to_hg38(df, chain):
+    """Replace SCHEMA's hg19 ``locus`` with hg38 ``chr`` and ``pos``, and split
+    ``alleles`` into ``ref`` and ``alt``. Loci that do not map are dropped."""
+    locus = df["locus"].str.split(":", n=1, expand=True)
+    chroms = ("chr" + locus[0]).to_numpy()
+    positions = locus[1].astype("int64").to_numpy()
+    lift = LiftOver(str(chain))
+    mapped = {}
+    for chrom, pos in set(zip(chroms, positions)):
+        hits = lift.convert_coordinate(chrom, int(pos) - 1)  # pyliftover is 0-based
+        mapped[chrom, pos] = (hits[0][0], hits[0][1] + 1) if hits else (None, -1)
+    lifted = [mapped[key] for key in zip(chroms, positions)]
+    alleles = df["alleles"].map(json.loads)
+    df = df.assign(chr=[c for c, _ in lifted], pos=[p for _, p in lifted],
+                   ref=alleles.str[0], alt=alleles.str[1])
+    return df[df["pos"] > 0]
+
+
 def load_variants(cfg, genes):
-    """SCHEMA variants with effect sizes and pLoF/missense indicators."""
+    """SCHEMA variants on hg38 with effect sizes and pLoF/missense indicators."""
     df = pd.read_csv(cfg.data("schema_variants"), sep="\t", compression="gzip")
+    df = lift_to_hg38(df, cfg.data("liftover_chain"))
     # Chained != (not .isin) keeps effect_size bit-identical; see metareg.
     chrom_mask = pd.Series(True, index=df.index)
     for excluded in cfg.param("excluded_chromosomes"):

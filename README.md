@@ -56,9 +56,6 @@ minutes. Stage 02 needs about 128 GB of memory, the rest 32–64 GB. Stage 01 lo
 model from `results/` if it is there. Training gives bit-identical parameters only on the same
 CPU generation, so use the saved model to reproduce the published predictions exactly.
 
-`results/figure_5.png` was rendered with matplotlib 3.11.0; with the pinned 3.7.1 the text
-rendering differs slightly. All other figures reproduce pixel for pixel with the pinned versions.
-
 ## Tests
 
 ```bash

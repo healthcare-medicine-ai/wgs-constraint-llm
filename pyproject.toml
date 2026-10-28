@@ -17,6 +17,7 @@ dependencies = [
     "statsmodels>=0.14",
     "hmmlearn>=0.3",
     "pyBigWig>=0.3.22",
+    "pyliftover>=0.4",
     "matplotlib>=3.7",
     "seaborn>=0.12",
     "mpl-scatter-density>=0.7",

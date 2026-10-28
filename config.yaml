@@ -16,8 +16,9 @@ inputs:
   alphamissense: AlphaMissense_hg38.tsv.gz
   genes4epilepsy: EpilepsyGenes_v2025-09.tsv
   gerp_bigwig: All_hg38_RS.bw
-  schema_variants: SCHEMA_variant_results_hg38.tsv.gz
+  schema_variants: SCHEMA_variant_results.tsv.bgz
   schema_genes: SCHEMA_gene_results.tsv.bgz
+  liftover_chain: hg19ToHg38.over.chain.gz
 
 # Inputs produced by an earlier stage, relative to results_dir.
 derived:
